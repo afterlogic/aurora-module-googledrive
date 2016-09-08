@@ -160,6 +160,12 @@ class GoogleDriveModule extends AApiModule
 			$mResult->Path = '';
 			$mResult->Size = $oFile->fileSize;
 			$mResult->FullPath = $oFile->id;
+			if (isset($oFile->thumbnailLink))
+			{
+				$mResult->Thumb = true;
+				$mResult->ThumbnailLink = $oFile->thumbnailLink;
+			}
+			
 
 //				$oItem->Owner = $oSocial->Name;
 			$mResult->LastModified = date_timestamp_get(date_create($oFile->createdDate));
@@ -198,16 +204,17 @@ class GoogleDriveModule extends AApiModule
 	
 	/**
 	 */
-	public function onGetFile($UserId, $Type, $Path, $Name)
+	public function onGetFile($UserId, $Type, $Path, &$Name, $IsThumb, &$Result)
 	{
 		if ($Type === self::$sService)
 		{
-			$bResult = false;
 			$oClient = $this->GetClient($Type);
 			if ($oClient)
 			{
 				$oDrive = new Google_Service_Drive($oClient);
 				$oFile = $oDrive->files->get($Name);
+				
+				$Name = $oFile->originalFilename;
 
 				\api_Utils::PopulateGoogleDriveFileInfo($oFile);
 				$oRequest = new Google_Http_Request($oFile->downloadUrl, 'GET', null, null);
@@ -216,12 +223,11 @@ class GoogleDriveModule extends AApiModule
 				$oHttpRequest = $oClientAuth->authenticatedRequest($oRequest);			
 				if ($oHttpRequest->getResponseHttpCode() === 200) 
 				{
-					$bResult = fopen('php://memory','r+');
-					fwrite($bResult, $oHttpRequest->getResponseBody());
-					rewind($bResult);
+					$Result = fopen('php://memory','r+');
+					fwrite($Result, $oHttpRequest->getResponseBody());
+					rewind($Result);
 				} 
 			}
-			return $bResult;
 		}
 	}	
 	
