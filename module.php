@@ -37,12 +37,7 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::Move::after', array($this, 'Move'));
 		$this->subscribeEvent('Files::Copy::after', array($this, 'Copy')); 
 		
-/*
-		$this->subscribeEvent('OAuthIntegratorAction', array($this, 'onOAuthIntegratorAction'));
-		$this->subscribeEvent('GetServices', array($this, 'onGetServices'));
-		$this->subscribeEvent('GetServicesSettings', array($this, 'onGetServicesSettings'));
-		$this->subscribeEvent('UpdateServicesSettings', array($this, 'onUpdateServicesSettings'));
- */
+		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 	}
 	
 	public function GetStorages(&$aResult)
@@ -150,7 +145,7 @@ class GoogleDriveModule extends AApiModule
 		$mResult = false;
 		if ($oFile)
 		{
-			\api_Utils::PopulateGoogleDriveFileInfo($oFile);
+			$this->PopulateGoogleDriveFileInfo($oFile);
 			$mResult /*@var $mResult \CFileStorageItem */ = new  \CFileStorageItem();
 			$mResult->IsExternal = true;
 			$mResult->TypeStr = $sType;
@@ -216,7 +211,7 @@ class GoogleDriveModule extends AApiModule
 				
 				$Name = $oFile->originalFilename;
 
-				\api_Utils::PopulateGoogleDriveFileInfo($oFile);
+				$this->PopulateGoogleDriveFileInfo($oFile);
 				$oRequest = new Google_Http_Request($oFile->downloadUrl, 'GET', null, null);
 				$oClientAuth = $oClient->getAuth();
 				$oClientAuth->sign($oRequest);
@@ -545,6 +540,137 @@ class GoogleDriveModule extends AApiModule
 			}
 		}
 	}		
+	
+	public function onPopulateFileItem(&$oItem)
+	{
+		if ($oItem->IsLink)
+		{
+			if (false !== strpos($oItem->LinkUrl, 'drive.google.com'))
+			{
+				$oItem->LinkType = 'google';
+				$oGoogleAuthWebclientModule = \CApi::GetModule('GoogleAuthWebclient');
+				if ($oGoogleAuthWebclientModule)
+				{
+					$sKey = $oGoogleAuthWebclientModule->GetConfig('Key');
+				}
+				$oFileInfo = $this->GetLinkInfo($oItem->LinkUrl, $sKey);
+				if ($oFileInfo)
+				{
+					$oItem->Name = isset($oFileInfo->title) ? $oFileInfo->title : $oItem->Name;
+					$oItem->Size = isset($oFileInfo->fileSize) ? $oFileInfo->fileSize : $oItem->Size;
+					if (isset($oFileInfo->thumbnailLink))
+					{
+						$oItem->Thumb = true;
+						$oItem->ThumbnailLink = $oFileInfo->thumbnailLink;
+					}
+				}				
+				return true;
+			}
+		}
+	}	
+	
+	protected function PopulateGoogleDriveFileInfo(&$oFileInfo)
+	{
+		if ($oFileInfo->mimeType !== "application/vnd.google-apps.folder" && !isset($oFileInfo->downloadUrl))
+		{
+			switch($oFileInfo->mimeType)
+			{
+				case 'application/vnd.google-apps.document':
+					if (is_array($oFileInfo->exportLinks))
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+					}
+					else
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
+					}
+					$oFileInfo->title = $oFileInfo->title . '.docx';
+					break;
+				case 'application/vnd.google-apps.spreadsheet':
+					if (is_array($oFileInfo->exportLinks))
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+					}
+					else
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
+					}
+					$oFileInfo->title = $oFileInfo->title . '.xlsx';
+					break;
+				case 'application/vnd.google-apps.drawing':
+					if (is_array($oFileInfo->exportLinks))
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['image/png'];
+					}
+					else
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'image/png'};
+					}
+					$oFileInfo->title = $oFileInfo->title . '.png';
+					break;
+				case 'application/vnd.google-apps.presentation':
+					if (is_array($oFileInfo->exportLinks))
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+					}
+					else
+					{
+						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'application/vnd.openxmlformats-officedocument.presentationml.presentation'};
+					}
+					$oFileInfo->title = $oFileInfo->title . '.pptx';
+					break;
+			}
+		}
+	}
+	
+	
+	protected function GetLinkInfo($sLink, $sGoogleAPIKey, $sAccessToken = null, $bLinkAsId = false)
+	{
+		$mResult = false;
+		$sGDId = '';
+		if ($bLinkAsId)
+		{
+			$sGDId = $sLink;
+		}
+		else
+		{
+			$matches = array();
+			preg_match("%https://\w+\.google\.com/\w+/d/(.*?)/.*%", $sLink, $matches);
+			if (!isset($matches[1]))
+			{
+				preg_match("%https://\w+\.google\.com/open\?id=(.*)%", $sLink, $matches);
+			}
+			
+			$sGDId = isset($matches[1]) ? $matches[1] : '';	
+		}
+		
+		if ($sGDId !== '')
+		{
+			$sUrl = "https://www.googleapis.com/drive/v2/files/".$sGDId.'?key='.$sGoogleAPIKey;
+			$aHeaders = $sAccessToken ? array('Authorization: Bearer '. $sAccessToken) : array();
+
+			$sContentType = '';
+			$iCode = 0;
+
+			$mResult = \MailSo\Base\Http::SingletonInstance()->GetUrlAsString($sUrl, '', $sContentType, $iCode, null, 10, '', '', $aHeaders);
+			if ($iCode === 200)
+			{
+				$mResult = json_decode($mResult);	
+				$this->PopulateGoogleDriveFileInfo($mResult);
+			}
+			else
+			{
+				$mResult = false;
+			}
+		}
+		else
+		{
+			$mResult = false;
+		}
+		
+		return $mResult;
+	}
+	
 	
 	
 }
