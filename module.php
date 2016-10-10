@@ -40,7 +40,7 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 	}
 	
-	public function GetStorages(&$aResult)
+	public function GetStorages(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
@@ -49,7 +49,7 @@ class GoogleDriveModule extends AApiModule
 
 		if ($oSocialAccount instanceof COAuthAccount && $oSocialAccount->Type === self::$sService)
 		{		
-			$aResult['@Result'][] = [
+			$mResult[] = [
 				'Type' => self::$sService, 
 				'IsExternal' => true,
 				'DisplayName' => 'GoogleDrive'
@@ -106,9 +106,9 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function FileExists(&$aData)
+	public function FileExists(&$aData, &$mResult)
 	{
-		$bResult = false;
+		$mResult = false;
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
 		if ($aData['Type'] === self::$sService)
@@ -116,11 +116,9 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient($aData['Type']);
 			if ($oClient)
 			{
-				$bResult = true;
+				$mResult = true;
 			}
 		}
-
-		$aData['@Result'] = $bResult;
 	}	
 
 	protected function _dirname($sPath)
@@ -229,17 +227,17 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function GetFiles(&$aData)
+	public function GetFiles(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
 		if ($aData['Type'] === self::$sService)
 		{
-			$mResult = array();
+			$mResult['Items'] = array();
 			$oClient = $this->GetClient($aData['Type']);
 			if ($oClient)
 			{
-				$mResult = array();
+				$mResult['Items']  = array();
 				$oDrive = new Google_Service_Drive($oClient);
 				$sPath = ltrim(basename($aData['Path']), '/');
 
@@ -283,19 +281,17 @@ class GoogleDriveModule extends AApiModule
 					$oItem /*@var $oItem \CFileStorageItem */ = $this->PopulateFileInfo($aData['Type'], $aData['Path'], $oChild);
 					if ($oItem)
 					{
-						$mResult[] = $oItem;
+						$mResult['Items'][] = $oItem;
 					}
 				}
-		}
-
-			$aData['@Result']['Items'] = $mResult;
+			}
 		}
 	}	
 
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function CreateFolder(&$aData)
+	public function CreateFolder(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -304,7 +300,7 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient($aData['Type']);
 			if ($oClient)
 			{
-				$bResult = false;
+				$mResult = false;
 
 				$folder = new Google_Service_Drive_DriveFile();
 				$folder->setTitle($aData['FolderName']);
@@ -322,13 +318,12 @@ class GoogleDriveModule extends AApiModule
 				try 
 				{
 					$oDrive->files->insert($folder, array());
-					$bResult = true;
+					$mResult = true;
 				} 
 				catch (Exception $ex) 
 				{
-					$bResult = false;
+					$mResult = false;
 				}				
-				$aData['@Result'] = $bResult;
 			}
 		}
 	}	
@@ -390,7 +385,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Delete(&$aData)
+	public function Delete(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -399,7 +394,7 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient($aData['Type']);
 			if ($oClient)
 			{
-				$bResult = false;
+				$mResult = false;
 				$oDrive = new Google_Service_Drive($oClient);
 
 				foreach ($aData['Items'] as $aItem)
@@ -407,15 +402,13 @@ class GoogleDriveModule extends AApiModule
 					try 
 					{
 						$oDrive->files->trash($aItem['Name']);
-						$bResult = true;
+						$mResult = true;
 					} 
 					catch (Exception $ex) 
 					{
-						$bResult = false;
+						$mResult = false;
 					}
 				}
-
-				$aData['@Result'] = $bResult;
 			}
 		}
 	}	
@@ -423,7 +416,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Rename(&$aData)
+	public function Rename(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -432,7 +425,7 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient($aData['Type']);
 			if ($oClient)
 			{
-				$bResult = false;
+				$mResult = false;
 				$oDrive = new Google_Service_Drive($oClient);
 				// First retrieve the file from the API.
 				$file = $oDrive->files->get($aData['Name']);
@@ -445,13 +438,12 @@ class GoogleDriveModule extends AApiModule
 				try 
 				{
 					$oDrive->files->update($aData['Name'], $file, $additionalParams);
-					$bResult = true;
+					$mResult = true;
 				} 
 				catch (Exception $ex) 
 				{
-					$bResult = false;
+					$mResult = false;
 				}
-				$aData['@Result'] = $bResult;
 			}
 		}
 	}	
@@ -459,7 +451,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Move(&$aData)
+	public function Move(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -468,7 +460,7 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient($aData['FromType']);
 			if ($oClient)
 			{
-				$bResult = false;
+				$mResult = false;
 
 				$aData['FromPath'] = $aData['FromPath'] === '' ?  'root' :  trim($aData['FromPath'], '/');
 				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  trim($aData['ToPath'], '/');
@@ -487,15 +479,13 @@ class GoogleDriveModule extends AApiModule
 					try 
 					{
 						$oDrive->files->patch($aItem['Name'], $oFile);
-						$bResult = true;
+						$mResult = true;
 					} 
 					catch (Exception $ex) 
 					{
-						$bResult = false;
+						$mResult = false;
 					}
 				}
-				
-				$aData['@Result'] = $bResult;
 			}
 		}
 	}	
@@ -503,7 +493,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Copy(&$aData)
+	public function Copy(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -512,7 +502,7 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient($aData['FromType']);
 			if ($oClient)
 			{
-				$bResult = false;
+				$mResult = false;
 				$oDrive = new Google_Service_Drive($oClient);
 
 				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  trim($aData['ToPath'], '/');
@@ -529,14 +519,13 @@ class GoogleDriveModule extends AApiModule
 					try 
 					{
 						$oDrive->files->copy($aItem['Name'], $copiedFile);
-						$bResult = true;
+						$mResult = true;
 					} 
 					catch (Exception $ex) 
 					{
-						$bResult = false;
+						$mResult = false;
 					}				
 				}
-				$aData['@Result'] = $bResult;
 			}
 		}
 	}		
