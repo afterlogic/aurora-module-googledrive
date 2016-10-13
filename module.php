@@ -40,7 +40,7 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 	}
 	
-	public function GetStorages(&$aData, &$mResult)
+	public function GetStorages($UserId, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
@@ -227,19 +227,19 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function GetFiles(&$aData, &$mResult)
+	public function GetFiles($UserId, $Type, $Path, $Pattern, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
-		if ($aData['Type'] === self::$sService)
+		if ($Type === self::$sService)
 		{
 			$mResult['Items'] = array();
-			$oClient = $this->GetClient($aData['Type']);
+			$oClient = $this->GetClient($Type);
 			if ($oClient)
 			{
 				$mResult['Items']  = array();
 				$oDrive = new Google_Service_Drive($oClient);
-				$sPath = ltrim(basename($aData['Path']), '/');
+				$sPath = ltrim(basename($Path), '/');
 
 				$aFileItems = array();
 				$sPageToken = NULL;			
@@ -250,9 +250,9 @@ class GoogleDriveModule extends AApiModule
 				}
 
 				$sQuery  = "'".$sPath."' in parents and trashed = false";
-				if (!empty($aData['Pattern']))
+				if (!empty($Pattern))
 				{
-					$sQuery .= " and title contains '".$aData['Pattern']."'";
+					$sQuery .= " and title contains '".$Pattern."'";
 				}
 
 				do 
@@ -278,7 +278,7 @@ class GoogleDriveModule extends AApiModule
 
 				foreach($aFileItems as $oChild) 
 				{
-					$oItem /*@var $oItem \CFileStorageItem */ = $this->PopulateFileInfo($aData['Type'], $aData['Path'], $oChild);
+					$oItem /*@var $oItem \CFileStorageItem */ = $this->PopulateFileInfo($Type, $Path, $oChild);
 					if ($oItem)
 					{
 						$mResult['Items'][] = $oItem;
