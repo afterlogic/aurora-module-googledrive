@@ -22,25 +22,24 @@ class GoogleDriveModule extends AApiModule
 			}
 		}		
 		
-		$this->subscribeEvent('Files::GetStorages::after', array($this, 'GetStorages'));
+		$this->subscribeEvent('Files::GetStorages::after', array($this, 'onAfterGetStorages'));
 		$this->subscribeEvent('Files::GetFile', array($this, 'onGetFile'));
-		$this->subscribeEvent('Files::GetFiles::after', array($this, 'GetFiles'));
-		$this->subscribeEvent('Files::FileExists::after', array($this, 'FileExists'));
-		$this->subscribeEvent('Files::GetFileInfo::after', array($this, 'GetFileInfo'));
-		$this->subscribeEvent('Files::GetFile::after', array($this, 'GetFile'));
-		$this->subscribeEvent('Files::CreateFolder::after', array($this, 'CreateFolder'));
+		$this->subscribeEvent('Files::GetFiles::after', array($this, 'onAfterGetFiles'));
+		$this->subscribeEvent('Files::GetFileInfo::after', array($this, 'onAfterGetFileInfo'));
+		$this->subscribeEvent('Files::GetFile::after', array($this, 'onAfterGetFile'));
+		$this->subscribeEvent('Files::CreateFolder::after', array($this, 'onAfterCreateFolder'));
 		$this->subscribeEvent('Files::CreateFile', array($this, 'onCreateFile'));
-		$this->subscribeEvent('Files::CreatePublicLink::after', array($this, 'CreatePublicLink'));
-		$this->subscribeEvent('Files::DeletePublicLink::after', array($this, 'DeletePublicLink'));
-		$this->subscribeEvent('Files::Delete::after', array($this, 'Delete'));
-		$this->subscribeEvent('Files::Rename::after', array($this, 'Rename'));
-		$this->subscribeEvent('Files::Move::after', array($this, 'Move'));
-		$this->subscribeEvent('Files::Copy::after', array($this, 'Copy')); 
+		$this->subscribeEvent('Files::CreatePublicLink::after', array($this, 'onAfterCreatePublicLink'));
+		$this->subscribeEvent('Files::DeletePublicLink::after', array($this, 'onAfterDeletePublicLink'));
+		$this->subscribeEvent('Files::Delete::after', array($this, 'onAfterDelete'));
+		$this->subscribeEvent('Files::Rename::after', array($this, 'onAfterRename'));
+		$this->subscribeEvent('Files::Move::after', array($this, 'onAfterMove'));
+		$this->subscribeEvent('Files::Copy::after', array($this, 'onAfterCopy')); 
 		
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 	}
 	
-	public function GetStorages($UserId, &$mResult)
+	public function onAfterGetStorages($UserId, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
@@ -52,7 +51,7 @@ class GoogleDriveModule extends AApiModule
 			$mResult[] = [
 				'Type' => self::$sService, 
 				'IsExternal' => true,
-				'DisplayName' => 'GoogleDrive'
+				'DisplayName' => 'Google Drive'
 			];
 		}
 	}
@@ -101,24 +100,6 @@ class GoogleDriveModule extends AApiModule
 		}
 		
 		return $mResult;
-	}	
-	
-	/**
-	 * @param \CAccount $oAccount
-	 */
-	public function FileExists(&$aData, &$mResult)
-	{
-		$mResult = false;
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
-		
-		if ($aData['Type'] === self::$sService)
-		{
-			$oClient = $this->GetClient($aData['Type']);
-			if ($oClient)
-			{
-				$mResult = true;
-			}
-		}
 	}	
 
 	protected function _dirname($sPath)
@@ -176,7 +157,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function GetFileInfo($Type, $Path, $Name)
+	public function onAfterGetFileInfo($Type, $Path, $Name)
 	{
 		$mResult = false;
 		if ($Type === self::$sService)
@@ -227,7 +208,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function GetFiles($UserId, $Type, $Path, $Pattern, &$mResult)
+	public function onAfterGetFiles($UserId, $Type, $Path, $Pattern, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
@@ -291,7 +272,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function CreateFolder(&$aData, &$mResult)
+	public function onAfterCreateFolder(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -385,7 +366,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Delete(&$aData, &$mResult)
+	public function onAfterDelete(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -416,7 +397,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Rename(&$aData, &$mResult)
+	public function onAfterRename(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -451,7 +432,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Move(&$aData, &$mResult)
+	public function onAfterMove(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
@@ -493,7 +474,7 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function Copy(&$aData, &$mResult)
+	public function onAfterCopy(&$aData, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
