@@ -57,7 +57,7 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 	}
 	
-	public function onAfterGetStorages($UserId, &$mResult)
+	public function onAfterGetStorages($aArgs, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
@@ -175,19 +175,19 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function onAfterGetFileInfo($Type, $Path, $Name)
+	public function onAfterGetFileInfo($aArgs)
 	{
 		$mResult = false;
-		if ($Type === self::$sService)
+		if ($aArgs['Type'] === self::$sService)
 		{
 			\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 
-			$oClient = $this->GetClient($Type);
+			$oClient = $this->GetClient($aArgs['Type']);
 			if ($oClient)
 			{
 				$oDrive = new Google_Service_Drive($oClient);
-				$oFile = $oDrive->files->get($Name);
-				$mResult = $this->PopulateFileInfo($Type, $Path, $oFile);
+				$oFile = $oDrive->files->get($aArgs['Name']);
+				$mResult = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oFile);
 			}
 		}
 		
@@ -196,17 +196,17 @@ class GoogleDriveModule extends AApiModule
 	
 	/**
 	 */
-	public function onGetFile($UserId, $Type, $Path, &$Name, $IsThumb, &$Result)
+	public function onGetFile($aArgs, &$Result)
 	{
-		if ($Type === self::$sService)
+		if ($aArgs['Type'] === self::$sService)
 		{
-			$oClient = $this->GetClient($Type);
+			$oClient = $this->GetClient($aArgs['Type']);
 			if ($oClient)
 			{
 				$oDrive = new Google_Service_Drive($oClient);
-				$oFile = $oDrive->files->get($Name);
+				$oFile = $oDrive->files->get($aArgs['Name']);
 				
-				$Name = $oFile->originalFilename;
+				$aArgs['Name'] = $oFile->originalFilename;
 
 				$this->PopulateGoogleDriveFileInfo($oFile);
 				$oRequest = new Google_Http_Request($oFile->downloadUrl, 'GET', null, null);
@@ -226,19 +226,19 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function onAfterGetFiles($UserId, $Type, $Path, $Pattern, &$mResult)
+	public function onAfterGetFiles($aArgs, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
-		if ($Type === self::$sService)
+		if ($aArgs['Type'] === self::$sService)
 		{
 			$mResult['Items'] = array();
-			$oClient = $this->GetClient($Type);
+			$oClient = $this->GetClient($aArgs['Type']);
 			if ($oClient)
 			{
 				$mResult['Items']  = array();
 				$oDrive = new Google_Service_Drive($oClient);
-				$sPath = ltrim(basename($Path), '/');
+				$sPath = ltrim(basename($aArgs['Path']), '/');
 
 				$aFileItems = array();
 				$sPageToken = NULL;			
@@ -249,9 +249,9 @@ class GoogleDriveModule extends AApiModule
 				}
 
 				$sQuery  = "'".$sPath."' in parents and trashed = false";
-				if (!empty($Pattern))
+				if (!empty($aArgs['Pattern']))
 				{
-					$sQuery .= " and title contains '".$Pattern."'";
+					$sQuery .= " and title contains '".$aArgs['Pattern']."'";
 				}
 
 				do 
@@ -277,7 +277,7 @@ class GoogleDriveModule extends AApiModule
 
 				foreach($aFileItems as $oChild) 
 				{
-					$oItem /*@var $oItem \CFileStorageItem */ = $this->PopulateFileInfo($Type, $Path, $oChild);
+					$oItem /*@var $oItem \CFileStorageItem */ = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oChild);
 					if ($oItem)
 					{
 						$mResult['Items'][] = $oItem;
@@ -330,21 +330,21 @@ class GoogleDriveModule extends AApiModule
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function onCreateFile($UserId, $Type, $Path, $Name, $Data, &$Result)
+	public function onCreateFile($aArgs, &$Result)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
-		if ($Type === self::$sService)
+		if ($aArgs['Type'] === self::$sService)
 		{
-			$oClient = $this->GetClient($Type);
+			$oClient = $this->GetClient($aArgs['Type']);
 			if ($oClient)
 			{
-				$sMimeType = \MailSo\Base\Utils::MimeContentType($Name);
+				$sMimeType = \MailSo\Base\Utils::MimeContentType($aArgs['Name']);
 				$file = new Google_Service_Drive_DriveFile();
-				$file->setTitle($Name);
+				$file->setTitle($aArgs['Name']);
 				$file->setMimeType($sMimeType);
 
-				$Path = trim($Path, '/');
+				$Path = trim($aArgs['Path'], '/');
 				// Set the parent folder.
 				if ($Path != null) 
 				{
@@ -357,17 +357,17 @@ class GoogleDriveModule extends AApiModule
 				try 
 				{
 					$sData = '';
-					if (is_resource($Data))
+					if (is_resource($aArgs['Data']))
 					{
-						rewind($Data);
-						$sData = stream_get_contents($Data);
+						rewind($aArgs['Data']);
+						$sData = stream_get_contents($aArgs['Data']);
 					}
 					else
 					{
-						$sData = $Data;
+						$sData = $aArgs['Data'];
 					}
 					$oDrive->files->insert($file, array(
-						'data' => $Data,
+						'data' => $sData,
 						'mimeType' => $sMimeType,
 						'uploadType' => 'media'
 					));
@@ -529,7 +529,7 @@ class GoogleDriveModule extends AApiModule
 		}
 	}		
 	
-	public function onPopulateFileItem(&$oItem)
+	public function onPopulateFileItem($aArgs, &$oItem)
 	{
 		if ($oItem->IsLink)
 		{
