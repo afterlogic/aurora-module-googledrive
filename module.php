@@ -161,12 +161,6 @@ class GoogleDriveModule extends AApiModule
 
 //				$oItem->Owner = $oSocial->Name;
 			$mResult->LastModified = date_timestamp_get(date_create($oFile->createdDate));
-			$mResult->Hash = \CApi::EncodeKeyValues(array(
-				'Type' => $sType,
-				'Path' => $sPath,
-				'Name' => $mResult->Id,
-				'Size' => $mResult->Size
-			));
 		}
 
 		return $mResult;
