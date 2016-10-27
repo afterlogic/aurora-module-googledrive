@@ -7,7 +7,8 @@
                 "type":"zip"
         },
 	"require":{
-		"php":">=5.4.0"
+		"php":">=5.4.0",
+		"google/apiclient":"^2.0"
 	},
 	"extra": {
 		"installer-name": "GoogleDrive"
