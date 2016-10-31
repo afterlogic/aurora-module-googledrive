@@ -23,23 +23,11 @@ class GoogleDriveModule extends AApiModule
 	protected static $sService = 'google';
 	
 	protected $aRequireModules = array(
-		'OAuthIntegratorWebclient', 'GoogleAuthWebclient'
+		'OAuthIntegratorWebclient', 'Google'
 	);
 	
 	public function init() 
 	{
-		set_include_path(__DIR__."/classes/" . PATH_SEPARATOR . get_include_path());
-		
-		if (!class_exists('Google_Client'))
-		{
-			$this->incClass('Google/Client');
-			if (!class_exists('Google_Service_Drive'))
-			{
-				$this->incClass('Google/Service/Drive');
-				include_once 'Google/Service/Drive.php';
-			}
-		}		
-		
 		$this->subscribeEvent('Files::GetStorages::after', array($this, 'onAfterGetStorages'));
 		$this->subscribeEvent('Files::GetFile', array($this, 'onGetFile'));
 		$this->subscribeEvent('Files::GetFiles::after', array($this, 'onAfterGetFiles'));
@@ -61,8 +49,7 @@ class GoogleDriveModule extends AApiModule
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
-		$oOAuthIntegratorWebclientModule = \CApi::GetModuleDecorator('OAuthIntegratorWebclient');
-		$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sService);
+		$oSocialAccount = \CApi::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
 
 		if ($oSocialAccount instanceof COAuthAccount && $oSocialAccount->Type === self::$sService)
 		{		
