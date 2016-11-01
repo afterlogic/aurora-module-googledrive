@@ -72,12 +72,12 @@ class GoogleDriveModule extends AApiModule
 			$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount($sType);
 			if ($oSocialAccount)
 			{
-				$oGoogleAuthWebclientModule = \CApi::GetModuleDecorator('GoogleAuthWebClient');
-				if ($oGoogleAuthWebclientModule)
+				$oGoogleModule = \CApi::GetModuleDecorator('Google');
+				if ($oGoogleModule)
 				{
 					$oClient = new Google_Client();
-					$oClient->setClientId($oGoogleAuthWebclientModule->getConfig('Id', ''));
-					$oClient->setClientSecret($oGoogleAuthWebclientModule->getConfig('Secret', ''));
+					$oClient->setClientId($oGoogleModule->getConfig('Id', ''));
+					$oClient->setClientSecret($oGoogleModule->getConfig('Secret', ''));
 					$oClient->addScope('https://www.googleapis.com/auth/userinfo.email');
 					$oClient->addScope('https://www.googleapis.com/auth/userinfo.profile');
 					$oClient->addScope("https://www.googleapis.com/auth/drive");
