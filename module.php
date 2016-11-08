@@ -199,6 +199,8 @@ class GoogleDriveModule extends AApiModule
 					$Result = fopen('php://memory','r+');
 					fwrite($Result, $oHttpRequest->getResponseBody());
 					rewind($Result);
+					
+					return true;
 				} 
 			}
 		}
