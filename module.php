@@ -23,7 +23,8 @@ class GoogleDriveModule extends AApiModule
 	protected static $sService = 'google';
 	
 	protected $aRequireModules = array(
-		'OAuthIntegratorWebclient', 'Google'
+		'OAuthIntegratorWebclient', 
+		'GoogleAuthWebclient'
 	);
 	
 	public function init() 
@@ -43,15 +44,18 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::Copy::after', array($this, 'onAfterCopy')); 
 		
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
+		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
 	}
 	
 	public function onAfterGetStorages($aArgs, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
-		$oSocialAccount = \CApi::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
+		$oOAuthAccount = \CApi::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
 
-		if ($oSocialAccount instanceof COAuthAccount && $oSocialAccount->Type === self::$sService)
+		if ($oOAuthAccount instanceof COAuthAccount && 
+				$oOAuthAccount->Type === self::$sService && 
+					$oOAuthAccount->issetScope('filestorage'))
 		{		
 			$mResult[] = [
 				'Type' => self::$sService, 
@@ -594,7 +598,6 @@ class GoogleDriveModule extends AApiModule
 		}
 	}
 	
-	
 	protected function GetLinkInfo($sLink, $sGoogleAPIKey, $sAccessToken = null, $bLinkAsId = false)
 	{
 		$mResult = false;
@@ -642,6 +645,26 @@ class GoogleDriveModule extends AApiModule
 		return $mResult;
 	}
 	
-	
-	
+	/**
+	 * Passes data to connect to service.
+	 * 
+	 * @ignore
+	 * @param string $aArgs Service type to verify if data should be passed.
+	 * @param boolean|array $mResult variable passed by reference to take the result.
+	 */
+	public function onGetSettings($aArgs, &$mResult)
+	{
+		$iUserId = \CApi::getAuthenticatedUserId();
+
+		$aScope = array(
+			'Name' => 'filestorage',
+			'Description' => $this->i18N('SCOPE_FILESTORAGE', $iUserId),
+			'Value' => false
+		);
+		if ($aArgs['OAuthAccount'] instanceof \COAuthAccount)
+		{
+			$aScope['Value'] = $aArgs['OAuthAccount']->issetScope('filestorage');
+		}
+		$mResult['Scopes'][] = $aScope;
+	}	
 }
