@@ -42,7 +42,7 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::Rename::after', array($this, 'onAfterRename'));
 		$this->subscribeEvent('Files::Move::after', array($this, 'onAfterMove'));
 		$this->subscribeEvent('Files::Copy::after', array($this, 'onAfterCopy')); 
-		
+		$this->subscribeEvent('Files::CheckUrl', array($this, 'onAfterCheckUrl'));
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
 	}
@@ -65,45 +65,42 @@ class GoogleDriveModule extends AApiModule
 		}
 	}
 	
-	protected function GetClient($sType)
+	protected function GetClient()
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
 		$mResult = false;
-		if ($sType === self::$sService)
+		$oOAuthIntegratorWebclientModule = \CApi::GetModuleDecorator('OAuthIntegratorWebclient');
+		$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sService);
+		if ($oSocialAccount)
 		{
-			$oOAuthIntegratorWebclientModule = \CApi::GetModuleDecorator('OAuthIntegratorWebclient');
-			$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount($sType);
-			if ($oSocialAccount)
+			$oGoogleModule = \CApi::GetModuleDecorator('Google');
+			if ($oGoogleModule)
 			{
-				$oGoogleModule = \CApi::GetModuleDecorator('Google');
-				if ($oGoogleModule)
+				$oClient = new Google_Client();
+				$oClient->setClientId($oGoogleModule->getConfig('Id', ''));
+				$oClient->setClientSecret($oGoogleModule->getConfig('Secret', ''));
+				$oClient->addScope('https://www.googleapis.com/auth/userinfo.email');
+				$oClient->addScope('https://www.googleapis.com/auth/userinfo.profile');
+				$oClient->addScope("https://www.googleapis.com/auth/drive");
+				$bRefreshToken = false;
+				try
 				{
-					$oClient = new Google_Client();
-					$oClient->setClientId($oGoogleModule->getConfig('Id', ''));
-					$oClient->setClientSecret($oGoogleModule->getConfig('Secret', ''));
-					$oClient->addScope('https://www.googleapis.com/auth/userinfo.email');
-					$oClient->addScope('https://www.googleapis.com/auth/userinfo.profile');
-					$oClient->addScope("https://www.googleapis.com/auth/drive");
-					$bRefreshToken = false;
-					try
-					{
-						$oClient->setAccessToken($oSocialAccount->AccessToken);
-					}
-					catch (Exception $oException)
-					{
-						$bRefreshToken = true;
-					}
-					if ($oClient->isAccessTokenExpired() || $bRefreshToken) 
-					{
-						$oClient->refreshToken($oSocialAccount->RefreshToken);
-						$oSocialAccount->AccessToken = $oClient->getAccessToken();
-						$oOAuthIntegratorWebclientModule->UpdateAccount($oSocialAccount);
-					}				
-					if ($oClient->getAccessToken())
-					{
-						$mResult = $oClient;
-					}
+					$oClient->setAccessToken($oSocialAccount->AccessToken);
+				}
+				catch (Exception $oException)
+				{
+					$bRefreshToken = true;
+				}
+				if ($oClient->isAccessTokenExpired() || $bRefreshToken) 
+				{
+					$oClient->refreshToken($oSocialAccount->RefreshToken);
+					$oSocialAccount->AccessToken = $oClient->getAccessToken();
+					$oOAuthIntegratorWebclientModule->UpdateAccount($oSocialAccount);
+				}				
+				if ($oClient->getAccessToken())
+				{
+					$mResult = $oClient;
 				}
 			}
 		}
@@ -157,6 +154,19 @@ class GoogleDriveModule extends AApiModule
 		return $mResult;
 	}	
 	
+	protected function _getFileInfo($sName)
+	{
+		$mResult = false;
+		$oClient = $this->GetClient();
+		if ($oClient)
+		{
+			$oDrive = new Google_Service_Drive($oClient);
+			$mResult = $oDrive->files->get($sName);
+		}
+		
+		return $mResult;
+	}
+	
 	/**
 	 * @param \CAccount $oAccount
 	 */
@@ -166,13 +176,10 @@ class GoogleDriveModule extends AApiModule
 		if ($aArgs['Type'] === self::$sService)
 		{
 			\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
-
-			$oClient = $this->GetClient($aArgs['Type']);
-			if ($oClient)
+			$oFileInfo = $this->_getFileInfo($aArgs['Name']);
+			if ($oFileInfo)
 			{
-				$oDrive = new Google_Service_Drive($oClient);
-				$oFile = $oDrive->files->get($aArgs['Name']);
-				$mResult = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oFile);
+				$mResult = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oFileInfo);
 			}
 		}
 		
@@ -185,7 +192,7 @@ class GoogleDriveModule extends AApiModule
 	{
 		if ($aArgs['Type'] === self::$sService)
 		{
-			$oClient = $this->GetClient($aArgs['Type']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$oDrive = new Google_Service_Drive($oClient);
@@ -220,7 +227,7 @@ class GoogleDriveModule extends AApiModule
 		if ($aArgs['Type'] === self::$sService)
 		{
 			$mResult['Items'] = array();
-			$oClient = $this->GetClient($aArgs['Type']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$mResult['Items']  = array();
@@ -283,7 +290,7 @@ class GoogleDriveModule extends AApiModule
 		
 		if ($aData['Type'] === self::$sService)
 		{
-			$oClient = $this->GetClient($aData['Type']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$mResult = false;
@@ -323,7 +330,7 @@ class GoogleDriveModule extends AApiModule
 		
 		if ($aArgs['Type'] === self::$sService)
 		{
-			$oClient = $this->GetClient($aArgs['Type']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$sMimeType = \MailSo\Base\Utils::MimeContentType($aArgs['Name']);
@@ -377,7 +384,7 @@ class GoogleDriveModule extends AApiModule
 		
 		if ($aData['Type'] === self::$sService)
 		{
-			$oClient = $this->GetClient($aData['Type']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$mResult = false;
@@ -408,7 +415,7 @@ class GoogleDriveModule extends AApiModule
 		
 		if ($aData['Type'] === self::$sService)
 		{
-			$oClient = $this->GetClient($aData['Type']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$mResult = false;
@@ -443,7 +450,7 @@ class GoogleDriveModule extends AApiModule
 		
 		if ($aData['FromType'] === self::$sService)
 		{
-			$oClient = $this->GetClient($aData['FromType']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$mResult = false;
@@ -485,7 +492,7 @@ class GoogleDriveModule extends AApiModule
 		
 		if ($aData['FromType'] === self::$sService)
 		{
-			$oClient = $this->GetClient($aData['FromType']);
+			$oClient = $this->GetClient();
 			if ($oClient)
 			{
 				$mResult = false;
@@ -523,20 +530,31 @@ class GoogleDriveModule extends AApiModule
 			if (false !== strpos($oItem->LinkUrl, 'drive.google.com'))
 			{
 				$oItem->LinkType = 'google';
-				$oGoogleAuthWebclientModule = \CApi::GetModule('GoogleAuthWebclient');
-				if ($oGoogleAuthWebclientModule)
-				{
-					$sKey = $oGoogleAuthWebclientModule->GetConfig('Key');
-				}
-				$oFileInfo = $this->GetLinkInfo($oItem->LinkUrl, $sKey);
+
+				$oFileInfo = $this->GetLinkInfo($oItem->LinkUrl);
 				if ($oFileInfo)
 				{
-					$oItem->Name = isset($oFileInfo->title) ? $oFileInfo->title : $oItem->Name;
-					$oItem->Size = isset($oFileInfo->fileSize) ? $oFileInfo->fileSize : $oItem->Size;
+//					$oItem->Name = isset($oFileInfo->title) ? $oFileInfo->title : $oItem->Name;
+					if ($oFileInfo->mimeType === "application/vnd.google-apps.folder")
+					{
+						$oItem->MainAction = 'list';
+						$oItem->FullPath = $oFileInfo->id;
+						$oItem->TypeStr = 'google';
+						$oItem->Size = 0;
+					}
+					else
+					{
+						$oItem->Size = isset($oFileInfo->fileSize) ? $oFileInfo->fileSize : $oItem->Size;
+					}
 					if (isset($oFileInfo->thumbnailLink))
 					{
 						$oItem->Thumb = true;
 						$oItem->ThumbnailLink = $oFileInfo->thumbnailLink;
+					}
+					else if (isset($oFileInfo->iconLink))
+					{
+						$oItem->Thumb = true;
+						$oItem->ThumbnailLink = $oFileInfo->iconLink;
 					}
 				}				
 				return true;
@@ -598,7 +616,7 @@ class GoogleDriveModule extends AApiModule
 		}
 	}
 	
-	protected function GetLinkInfo($sLink, $sGoogleAPIKey, $sAccessToken = null, $bLinkAsId = false)
+	protected function GetLinkInfo($sLink, $sGoogleAPIKey = '', $sAccessToken = null, $bLinkAsId = false)
 	{
 		$mResult = false;
 		$sGDId = '';
@@ -620,17 +638,11 @@ class GoogleDriveModule extends AApiModule
 		
 		if ($sGDId !== '')
 		{
-			$sUrl = "https://www.googleapis.com/drive/v2/files/".$sGDId.'?key='.$sGoogleAPIKey;
-			$aHeaders = $sAccessToken ? array('Authorization: Bearer '. $sAccessToken) : array();
-
-			$sContentType = '';
-			$iCode = 0;
-
-			$mResult = \MailSo\Base\Http::SingletonInstance()->GetUrlAsString($sUrl, '', $sContentType, $iCode, null, 10, '', '', $aHeaders);
-			if ($iCode === 200)
+			$oFileInfo = $this->_getFileInfo($sGDId);
+			if ($oFileInfo)
 			{
-				$mResult = json_decode($mResult);	
-				$this->PopulateGoogleDriveFileInfo($mResult);
+				$this->PopulateGoogleDriveFileInfo($oFileInfo);
+				$mResult = $oFileInfo;
 			}
 			else
 			{
@@ -667,4 +679,9 @@ class GoogleDriveModule extends AApiModule
 		}
 		$mResult['Scopes'][] = $aScope;
 	}	
+	
+	public function onAfterCheckUrl(&$aArgs, &$aReslult)
+	{
+		
+	}
 }
