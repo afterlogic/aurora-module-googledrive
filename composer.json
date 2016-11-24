@@ -1,14 +1,19 @@
 {
 	"name": "afterlogic/aurora-module-googledrive",
-    	"version":"0.1.0",
-    	"type": "aurora-module",
-    	"dist":{
-               "url":"https://github.com/afterlogic/aurora-module-googledrive/archive/master.zip",
-                "type":"zip"
-        },
-	"require":{
-		"php":">=5.4.0",
-		"afterlogic/aurora-framework": "~0.1",
+	"version": "0.2.0",
+	"type": "aurora-module",
+	"dist": {
+		"url": "https://github.com/afterlogic/aurora-module-googledrive/archive/0.2.0.zip",
+		"type": "zip"
+	},
+	"source": {
+		"url": "https://github.com/afterlogic/aurora-module-googledrive",
+		"type": "git",
+		"reference": "tags/0.2.0"
+	},
+	"require": {
+		"php": ">=5.4.0",
+		"afterlogic/aurora-framework": "~0.2",
 		"google/apiclient":"1.1.7"
 	},
 	"extra": {
