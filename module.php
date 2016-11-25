@@ -535,26 +535,23 @@ class GoogleDriveModule extends AApiModule
 				if ($oFileInfo)
 				{
 //					$oItem->Name = isset($oFileInfo->title) ? $oFileInfo->title : $oItem->Name;
+					if (isset($oFileInfo->thumbnailLink))
+					{
+						$oItem->Thumb = true;
+						$oItem->ThumbnailLink = $oFileInfo->thumbnailLink;
+					}
 					if ($oFileInfo->mimeType === "application/vnd.google-apps.folder")
 					{
 						$oItem->MainAction = 'list';
 						$oItem->FullPath = $oFileInfo->id;
 						$oItem->TypeStr = 'google';
 						$oItem->Size = 0;
+						$oItem->Thumb = true;
+						$oItem->ThumbnailLink = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/icon.png';
 					}
 					else
 					{
 						$oItem->Size = isset($oFileInfo->fileSize) ? $oFileInfo->fileSize : $oItem->Size;
-					}
-					if (isset($oFileInfo->thumbnailLink))
-					{
-						$oItem->Thumb = true;
-						$oItem->ThumbnailLink = $oFileInfo->thumbnailLink;
-					}
-					else if (isset($oFileInfo->iconLink))
-					{
-						$oItem->Thumb = true;
-						$oItem->ThumbnailLink = $oFileInfo->iconLink;
 					}
 				}				
 				return true;
