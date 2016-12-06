@@ -45,6 +45,10 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::CheckUrl', array($this, 'onAfterCheckUrl'));
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
+		
+		$this->subscribeEvent('Files::GetFiles::before', array($this, 'CheckUrlFile'));
+		$this->subscribeEvent('Files::UploadFile::before', array($this, 'CheckUrlFile'));
+		$this->subscribeEvent('Files::CreateFolder::before', array($this, 'CheckUrlFile'));
 	}
 	
 	public function onAfterGetStorages($aArgs, &$mResult)
@@ -217,6 +221,21 @@ class GoogleDriveModule extends AApiModule
 		}
 	}	
 	
+	public function CheckUrlFile(&$aArgs, &$mResult)
+	{
+		if (strpos($aArgs['Path'], '.url') !== false)
+		{
+			list($sUrl, $sId) = explode('.url', $aArgs['Path']);
+			$sUrl .= '.url';
+			$aArgs['Path'] = $sUrl;
+			$this->prepareArgs($aArgs);
+			if ($sId)
+			{
+				$aArgs['Path'] = basename($sId);
+			}
+		}
+	}
+
 	/**
 	 * @param \CAccount $oAccount
 	 */
@@ -281,29 +300,62 @@ class GoogleDriveModule extends AApiModule
 		}
 	}	
 
+	protected function prepareArgs(&$aData)
+	{
+		$aPathInfo = pathinfo($aData['Path']);
+		$sExtension = isset($aPathInfo['extension']) ? $aPathInfo['extension'] : '';
+		if ($sExtension === 'url')
+		{
+			$aArgs = array(
+				'UserId' => $aData['UserId'],
+				'Type' => $aData['Type'],
+				'Path' => $aPathInfo['dirname'],
+				'Name' => $aPathInfo['basename'],
+				'IsThumb' => false
+			);
+			$mResult = false;
+			\CApi::GetModuleManager()->broadcastEvent(
+				'Files',
+				'GetFile', 
+				$aArgs,
+				$mResult
+			);	
+			if (is_resource($mResult))
+			{
+				$aUrlFileInfo = \api_Utils::parseIniString(stream_get_contents($mResult));
+				if ($aUrlFileInfo && isset($aUrlFileInfo['URL']))
+				{
+					if ((false !== strpos($aUrlFileInfo['URL'], 'drive.google.com')))
+					{
+						$aData['Type'] = 'google';
+						$aData['Path'] = $this->GetIdByLink($aUrlFileInfo['URL']);
+					}
+				}
+			}		
+		}
+	}
+	
 	/**
 	 * @param \CAccount $oAccount
 	 */
-	public function onAfterCreateFolder(&$aData, &$mResult)
+	public function onAfterCreateFolder(&$aArgs, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
-		if ($aData['Type'] === self::$sService)
+		if ($aArgs['Type'] === self::$sService)
 		{
 			$oClient = $this->GetClient();
 			if ($oClient)
 			{
-				$mResult = false;
-
 				$folder = new Google_Service_Drive_DriveFile();
-				$folder->setTitle($aData['FolderName']);
+				$folder->setTitle($aArgs['FolderName']);
 				$folder->setMimeType('application/vnd.google-apps.folder');
 
 				// Set the parent folder.
-				if ($aData['Path'] != null) 
+				if ($aArgs['Path'] != null) 
 				{
 				  $parent = new Google_Service_Drive_ParentReference();
-				  $parent->setId($aData['Path']);
+				  $parent->setId($aArgs['Path']);
 				  $folder->setParents(array($parent));
 				}
 
@@ -327,7 +379,7 @@ class GoogleDriveModule extends AApiModule
 	public function onCreateFile($aArgs, &$Result)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
-		
+
 		if ($aArgs['Type'] === self::$sService)
 		{
 			$oClient = $this->GetClient();
@@ -534,7 +586,6 @@ class GoogleDriveModule extends AApiModule
 				$oFileInfo = $this->GetLinkInfo($oItem->LinkUrl);
 				if ($oFileInfo)
 				{
-//					$oItem->Name = isset($oFileInfo->title) ? $oFileInfo->title : $oItem->Name;
 					if (isset($oFileInfo->thumbnailLink))
 					{
 						$oItem->Thumb = true;
@@ -543,11 +594,8 @@ class GoogleDriveModule extends AApiModule
 					if ($oFileInfo->mimeType === "application/vnd.google-apps.folder")
 					{
 						$oItem->MainAction = 'list';
-						$oItem->FullPath = $oFileInfo->id;
-						$oItem->TypeStr = 'google';
-						$oItem->Size = 0;
 						$oItem->Thumb = true;
-						$oItem->ThumbnailLink = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/icon.png';
+						$oItem->ThumbnailLink = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/drive.png';
 					}
 					else
 					{
@@ -613,7 +661,19 @@ class GoogleDriveModule extends AApiModule
 		}
 	}
 	
-	protected function GetLinkInfo($sLink, $sGoogleAPIKey = '', $sAccessToken = null, $bLinkAsId = false)
+	protected function GetIdByLink($sLink)
+	{
+		$matches = array();
+		preg_match("%https://\w+\.google\.com/\w+/d/(.*?)/.*%", $sLink, $matches);
+		if (!isset($matches[1]))
+		{
+			preg_match("%https://\w+\.google\.com/open\?id=(.*)%", $sLink, $matches);
+		}
+
+		return isset($matches[1]) ? $matches[1] : '';			
+	}
+	
+	protected function GetLinkInfo($sLink, $bLinkAsId = false)
 	{
 		$mResult = false;
 		$sGDId = '';
@@ -623,14 +683,7 @@ class GoogleDriveModule extends AApiModule
 		}
 		else
 		{
-			$matches = array();
-			preg_match("%https://\w+\.google\.com/\w+/d/(.*?)/.*%", $sLink, $matches);
-			if (!isset($matches[1]))
-			{
-				preg_match("%https://\w+\.google\.com/open\?id=(.*)%", $sLink, $matches);
-			}
-			
-			$sGDId = isset($matches[1]) ? $matches[1] : '';	
+			$sGDId = $this->GetIdByLink($sLink);
 		}
 		
 		if ($sGDId !== '')
