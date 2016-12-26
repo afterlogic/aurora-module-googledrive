@@ -22,10 +22,19 @@ class GoogleDriveModule extends AApiModule
 {
 	protected static $sService = 'google';
 	
+	protected $aSettingsMap = array(
+		'Scopes' => array('storage', 'string')
+	);
+	
 	protected $aRequireModules = array(
 		'OAuthIntegratorWebclient', 
 		'GoogleAuthWebclient'
 	);
+	
+	protected function issetScope($sScope)
+	{
+		return in_array($sScope, explode(' ', $this->getConfig('Scopes')));
+	}	
 	
 	public function init() 
 	{
@@ -45,6 +54,7 @@ class GoogleDriveModule extends AApiModule
 		$this->subscribeEvent('Files::CheckUrl', array($this, 'onAfterCheckUrl'));
 		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
 		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
+		$this->subscribeEvent('Google::UpdateSettings::after', array($this, 'onAfterUpdateSettings'));
 		
 		$this->subscribeEvent('Files::GetFiles::before', array($this, 'CheckUrlFile'));
 		$this->subscribeEvent('Files::UploadFile::before', array($this, 'CheckUrlFile'));
@@ -716,19 +726,54 @@ class GoogleDriveModule extends AApiModule
 	 */
 	public function onGetSettings($aArgs, &$mResult)
 	{
-		$iUserId = \CApi::getAuthenticatedUserId();
-
-		$aScope = array(
-			'Name' => 'filestorage',
-			'Description' => $this->i18N('SCOPE_FILESTORAGE', $iUserId),
-			'Value' => false
-		);
-		if ($aArgs['OAuthAccount'] instanceof \COAuthAccount)
+		$oUser = \CApi::getAuthenticatedUser();
+		
+		if (!empty($oUser))
 		{
-			$aScope['Value'] = $aArgs['OAuthAccount']->issetScope('filestorage');
+			$aScope = array(
+				'Name' => 'storage',
+				'Description' => $this->i18N('SCOPE_FILESTORAGE', $oUser->iId),
+				'Value' => false
+			);
+			if ($oUser->Role === \EUserRole::SuperAdmin)
+			{
+				$aScope['Value'] = $this->issetScope('storage');
+				$mResult['Scopes'][] = $aScope;
+			}
+			if ($oUser->Role === \EUserRole::NormalUser)
+			{
+				if ($aArgs['OAuthAccount'] instanceof \COAuthAccount)
+				{
+					$aScope['Value'] = $aArgs['OAuthAccount']->issetScope('storage');
+				}
+				if ($this->issetScope('storage'))
+				{
+					$mResult['Scopes'][] = $aScope;
+				}
+			}
+		}	
+	}
+	
+	public function onAfterUpdateSettings($aArgs, &$mResult)
+	{
+		$sScope = '';
+		if (isset($aArgs['Scopes']) && is_array($aArgs['Scopes']))
+		{
+			foreach($aArgs['Scopes'] as $aScope)
+			{
+				if ($aScope['Name'] === 'storage')
+				{
+					if ($aScope['Value'])
+					{
+						$sScope = 'storage';
+						break;
+					}
+				}
+			}
 		}
-		$mResult['Scopes'][] = $aScope;
-	}	
+		$this->setConfig('Scopes', $sScope);
+		$this->saveModuleConfig();
+	}		
 	
 	public function onAfterCheckUrl(&$aArgs, &$aReslult)
 	{
