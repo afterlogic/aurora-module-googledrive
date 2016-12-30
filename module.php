@@ -64,11 +64,22 @@ class GoogleDriveModule extends AApiModule
 	public function onAfterGetStorages($aArgs, &$mResult)
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+
+		$bEnableGoogleModule = false;
+		$oGoogleModule = \CApi::GetModule('Google');
+		if ($oGoogleModule instanceof \AApiModule)
+		{
+			$bEnableGoogleModule = $oGoogleModule->getConfig('EnableModule', false);
+		}
+		else
+		{
+			$bEnableGoogleModule = false;
+		}
 		
 		$oOAuthAccount = \CApi::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
 
 		if ($oOAuthAccount instanceof COAuthAccount && 
-				$oOAuthAccount->Type === self::$sService && 
+				$oOAuthAccount->Type === self::$sService && $bEnableGoogleModule &&
 					$this->issetScope('storage') && $oOAuthAccount->issetScope('storage'))
 		{		
 			$mResult[] = [
@@ -83,6 +94,19 @@ class GoogleDriveModule extends AApiModule
 	{
 		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
+		$oGoogleModule = \CApi::GetModule('Google');
+		if ($oGoogleModule instanceof \AApiModule)
+		{
+			if (!$oGoogleModule->getConfig('EnableModule', false))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			return false;
+		}
+
 		$mResult = false;
 		$oOAuthIntegratorWebclientModule = \CApi::GetModuleDecorator('OAuthIntegratorWebclient');
 		$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sService);
