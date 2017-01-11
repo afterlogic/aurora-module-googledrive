@@ -97,7 +97,7 @@ class GoogleDriveModule extends AApiModule
 		$oGoogleModule = \CApi::GetModule('Google');
 		if ($oGoogleModule instanceof \AApiModule)
 		{
-			if (!$oGoogleModule->getConfig('EnableModule', false))
+			if (!$oGoogleModule->getConfig('EnableModule', false) || !$this->issetScope('storage'))
 			{
 				return false;
 			}
