@@ -22,10 +22,6 @@ class GoogleDriveModule extends AApiModule
 {
 	protected static $sService = 'google';
 	
-	protected $aSettingsMap = array(
-		'Scopes' => array('storage', 'string')
-	);
-	
 	protected $aRequireModules = array(
 		'OAuthIntegratorWebclient', 
 		'GoogleAuthWebclient'
