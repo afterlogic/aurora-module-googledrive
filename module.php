@@ -624,6 +624,8 @@ class GoogleDriveModule extends AApiModule
 					if ($oFileInfo->mimeType === "application/vnd.google-apps.folder")
 					{
 						$oItem->MainAction = 'list';
+						$oItem->UnshiftAction('list');
+						
 						$oItem->Thumb = true;
 						$oItem->ThumbnailLink = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/drive.png';
 					}
