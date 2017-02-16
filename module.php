@@ -754,7 +754,7 @@ class GoogleDriveModule extends AApiModule
 		{
 			$aScope = array(
 				'Name' => 'storage',
-				'Description' => $this->i18N('SCOPE_FILESTORAGE', $oUser->iId),
+				'Description' => $this->i18N('SCOPE_FILESTORAGE', $oUser->EntityId),
 				'Value' => false
 			);
 			if ($oUser->Role === \EUserRole::SuperAdmin)
