@@ -18,7 +18,9 @@
  * @package Modules
  */
 
-class GoogleDriveModule extends AApiModule
+namespace Aurora\Modules;
+
+class GoogleDriveModule extends \AApiModule
 {
 	protected static $sService = 'google';
 	
@@ -29,7 +31,7 @@ class GoogleDriveModule extends AApiModule
 	
 	protected function issetScope($sScope)
 	{
-		return in_array($sScope, explode(' ', $this->getConfig('Scopes')));
+		return \in_array($sScope, \explode(' ', $this->getConfig('Scopes')));
 	}	
 	
 	public function init() 
@@ -74,7 +76,7 @@ class GoogleDriveModule extends AApiModule
 		
 		$oOAuthAccount = \CApi::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
 
-		if ($oOAuthAccount instanceof COAuthAccount && 
+		if ($oOAuthAccount instanceof \COAuthAccount && 
 				$oOAuthAccount->Type === self::$sService && $bEnableGoogleModule &&
 					$this->issetScope('storage') && $oOAuthAccount->issetScope('storage'))
 		{		
@@ -111,7 +113,7 @@ class GoogleDriveModule extends AApiModule
 			$oGoogleModule = \CApi::GetModuleDecorator('Google');
 			if ($oGoogleModule)
 			{
-				$oClient = new Google_Client();
+				$oClient = new \Google_Client();
 				$oClient->setClientId($oGoogleModule->getConfig('Id', ''));
 				$oClient->setClientSecret($oGoogleModule->getConfig('Secret', ''));
 				$oClient->addScope('https://www.googleapis.com/auth/userinfo.email');
@@ -122,7 +124,7 @@ class GoogleDriveModule extends AApiModule
 				{
 					$oClient->setAccessToken($oSocialAccount->AccessToken);
 				}
-				catch (Exception $oException)
+				catch (\Exception $oException)
 				{
 					$bRefreshToken = true;
 				}
@@ -144,14 +146,14 @@ class GoogleDriveModule extends AApiModule
 
 	protected function _dirname($sPath)
 	{
-		$sPath = dirname($sPath);
-		return str_replace(DIRECTORY_SEPARATOR, '/', $sPath); 
+		$sPath = \dirname($sPath);
+		return \str_replace(DIRECTORY_SEPARATOR, '/', $sPath); 
 	}
 	
 	protected function _basename($sPath)
 	{
-		$aPath = explode('/', $sPath);
-		return end($aPath); 
+		$aPath = \explode('/', $sPath);
+		return \end($aPath); 
 	}
 
 	/**
@@ -182,7 +184,7 @@ class GoogleDriveModule extends AApiModule
 			
 
 //				$oItem->Owner = $oSocial->Name;
-			$mResult->LastModified = date_timestamp_get(date_create($oFile->createdDate));
+			$mResult->LastModified = \date_timestamp_get(date_create($oFile->createdDate));
 		}
 
 		return $mResult;
@@ -194,7 +196,7 @@ class GoogleDriveModule extends AApiModule
 		$oClient = $this->GetClient();
 		if ($oClient)
 		{
-			$oDrive = new Google_Service_Drive($oClient);
+			$oDrive = new \Google_Service_Drive($oClient);
 			$mResult = $oDrive->files->get($sName);
 		}
 		
@@ -229,21 +231,21 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient();
 			if ($oClient)
 			{
-				$oDrive = new Google_Service_Drive($oClient);
+				$oDrive = new \Google_Service_Drive($oClient);
 				$oFile = $oDrive->files->get($aArgs['Name']);
 				
 				$aArgs['Name'] = $oFile->originalFilename;
 
 				$this->PopulateGoogleDriveFileInfo($oFile);
-				$oRequest = new Google_Http_Request($oFile->downloadUrl, 'GET', null, null);
+				$oRequest = new \Google_Http_Request($oFile->downloadUrl, 'GET', null, null);
 				$oClientAuth = $oClient->getAuth();
 				$oClientAuth->sign($oRequest);
 				$oHttpRequest = $oClientAuth->authenticatedRequest($oRequest);			
 				if ($oHttpRequest->getResponseHttpCode() === 200) 
 				{
-					$Result = fopen('php://memory','r+');
-					fwrite($Result, $oHttpRequest->getResponseBody());
-					rewind($Result);
+					$Result = \fopen('php://memory','r+');
+					\fwrite($Result, $oHttpRequest->getResponseBody());
+					\rewind($Result);
 					
 					return true;
 				} 
@@ -280,8 +282,8 @@ class GoogleDriveModule extends AApiModule
 			if ($oClient)
 			{
 				$mResult['Items']  = array();
-				$oDrive = new Google_Service_Drive($oClient);
-				$sPath = ltrim(basename($aArgs['Path']), '/');
+				$oDrive = new \Google_Service_Drive($oClient);
+				$sPath = \ltrim(\basename($aArgs['Path']), '/');
 
 				$aFileItems = array();
 				$sPageToken = NULL;			
@@ -308,7 +310,7 @@ class GoogleDriveModule extends AApiModule
 						}
 
 						$oFiles = $oDrive->files->listFiles($aParameters);
-						$aFileItems = array_merge($aFileItems, $oFiles->getItems());
+						$aFileItems = \array_merge($aFileItems, $oFiles->getItems());
 						$sPageToken = $oFiles->getNextPageToken();
 					} 
 					catch (Exception $e) 
@@ -332,7 +334,7 @@ class GoogleDriveModule extends AApiModule
 
 	protected function prepareArgs(&$aData)
 	{
-		$aPathInfo = pathinfo($aData['Path']);
+		$aPathInfo = \pathinfo($aData['Path']);
 		$sExtension = isset($aPathInfo['extension']) ? $aPathInfo['extension'] : '';
 		if ($sExtension === 'url')
 		{
@@ -350,12 +352,12 @@ class GoogleDriveModule extends AApiModule
 				$aArgs,
 				$mResult
 			);	
-			if (is_resource($mResult))
+			if (\is_resource($mResult))
 			{
-				$aUrlFileInfo = \api_Utils::parseIniString(stream_get_contents($mResult));
+				$aUrlFileInfo = \api_Utils::parseIniString(\stream_get_contents($mResult));
 				if ($aUrlFileInfo && isset($aUrlFileInfo['URL']))
 				{
-					if ((false !== strpos($aUrlFileInfo['URL'], 'drive.google.com')))
+					if ((false !== \strpos($aUrlFileInfo['URL'], 'drive.google.com')))
 					{
 						$aData['Type'] = 'google';
 						$aData['Path'] = $this->GetIdByLink($aUrlFileInfo['URL']);
@@ -377,25 +379,25 @@ class GoogleDriveModule extends AApiModule
 			$oClient = $this->GetClient();
 			if ($oClient)
 			{
-				$folder = new Google_Service_Drive_DriveFile();
+				$folder = new \Google_Service_Drive_DriveFile();
 				$folder->setTitle($aArgs['FolderName']);
 				$folder->setMimeType('application/vnd.google-apps.folder');
 
 				// Set the parent folder.
 				if ($aArgs['Path'] != null) 
 				{
-				  $parent = new Google_Service_Drive_ParentReference();
+				  $parent = new \Google_Service_Drive_ParentReference();
 				  $parent->setId($aArgs['Path']);
 				  $folder->setParents(array($parent));
 				}
 
-				$oDrive = new Google_Service_Drive($oClient);
+				$oDrive = new \Google_Service_Drive($oClient);
 				try 
 				{
 					$oDrive->files->insert($folder, array());
 					$mResult = true;
 				} 
-				catch (Exception $ex) 
+				catch (\Exception $ex) 
 				{
 					$mResult = false;
 				}				
@@ -416,27 +418,27 @@ class GoogleDriveModule extends AApiModule
 			if ($oClient)
 			{
 				$sMimeType = \MailSo\Base\Utils::MimeContentType($aArgs['Name']);
-				$file = new Google_Service_Drive_DriveFile();
+				$file = new \Google_Service_Drive_DriveFile();
 				$file->setTitle($aArgs['Name']);
 				$file->setMimeType($sMimeType);
 
-				$Path = trim($aArgs['Path'], '/');
+				$Path = \trim($aArgs['Path'], '/');
 				// Set the parent folder.
 				if ($Path != null) 
 				{
-				  $parent = new Google_Service_Drive_ParentReference();
+				  $parent = new \Google_Service_Drive_ParentReference();
 				  $parent->setId($Path);
 				  $file->setParents(array($parent));
 				}
 
-				$oDrive = new Google_Service_Drive($oClient);
+				$oDrive = new \Google_Service_Drive($oClient);
 				try 
 				{
 					$sData = '';
-					if (is_resource($aArgs['Data']))
+					if (\is_resource($aArgs['Data']))
 					{
-						rewind($aArgs['Data']);
-						$sData = stream_get_contents($aArgs['Data']);
+						\rewind($aArgs['Data']);
+						$sData = \stream_get_contents($aArgs['Data']);
 					}
 					else
 					{
@@ -449,7 +451,7 @@ class GoogleDriveModule extends AApiModule
 					));
 					$Result = true;
 				} 
-				catch (Exception $ex) 
+				catch (\Exception $ex) 
 				{
 					$Result = false;
 				}				
@@ -470,7 +472,7 @@ class GoogleDriveModule extends AApiModule
 			if ($oClient)
 			{
 				$mResult = false;
-				$oDrive = new Google_Service_Drive($oClient);
+				$oDrive = new \Google_Service_Drive($oClient);
 
 				foreach ($aData['Items'] as $aItem)
 				{
@@ -479,7 +481,7 @@ class GoogleDriveModule extends AApiModule
 						$oDrive->files->trash($aItem['Name']);
 						$mResult = true;
 					} 
-					catch (Exception $ex) 
+					catch (\Exception $ex) 
 					{
 						$mResult = false;
 					}
@@ -501,7 +503,7 @@ class GoogleDriveModule extends AApiModule
 			if ($oClient)
 			{
 				$mResult = false;
-				$oDrive = new Google_Service_Drive($oClient);
+				$oDrive = new \Google_Service_Drive($oClient);
 				// First retrieve the file from the API.
 				$file = $oDrive->files->get($aData['Name']);
 
@@ -515,7 +517,7 @@ class GoogleDriveModule extends AApiModule
 					$oDrive->files->update($aData['Name'], $file, $additionalParams);
 					$mResult = true;
 				} 
-				catch (Exception $ex) 
+				catch (\Exception $ex) 
 				{
 					$mResult = false;
 				}
@@ -537,12 +539,12 @@ class GoogleDriveModule extends AApiModule
 			{
 				$mResult = false;
 
-				$aData['FromPath'] = $aData['FromPath'] === '' ?  'root' :  trim($aData['FromPath'], '/');
-				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  trim($aData['ToPath'], '/');
+				$aData['FromPath'] = $aData['FromPath'] === '' ?  'root' :  \trim($aData['FromPath'], '/');
+				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  \trim($aData['ToPath'], '/');
 
-				$oDrive = new Google_Service_Drive($oClient);
+				$oDrive = new \Google_Service_Drive($oClient);
 
-				$parent = new Google_Service_Drive_ParentReference();
+				$parent = new \Google_Service_Drive_ParentReference();
 				$parent->setId($aData['ToPath']);
 
 	//			$oFile->setTitle($sNewName);
@@ -556,7 +558,7 @@ class GoogleDriveModule extends AApiModule
 						$oDrive->files->patch($aItem['Name'], $oFile);
 						$mResult = true;
 					} 
-					catch (Exception $ex) 
+					catch (\Exception $ex) 
 					{
 						$mResult = false;
 					}
@@ -578,14 +580,14 @@ class GoogleDriveModule extends AApiModule
 			if ($oClient)
 			{
 				$mResult = false;
-				$oDrive = new Google_Service_Drive($oClient);
+				$oDrive = new \Google_Service_Drive($oClient);
 
-				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  trim($aData['ToPath'], '/');
+				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  \trim($aData['ToPath'], '/');
 
-				$parent = new Google_Service_Drive_ParentReference();
+				$parent = new \Google_Service_Drive_ParentReference();
 				$parent->setId($aData['ToPath']);
 
-				$copiedFile = new Google_Service_Drive_DriveFile();
+				$copiedFile = new \Google_Service_Drive_DriveFile();
 	//			$copiedFile->setTitle($sNewName);
 				$copiedFile->setParents(array($parent));
 
@@ -596,7 +598,7 @@ class GoogleDriveModule extends AApiModule
 						$oDrive->files->copy($aItem['Name'], $copiedFile);
 						$mResult = true;
 					} 
-					catch (Exception $ex) 
+					catch (\Exception $ex) 
 					{
 						$mResult = false;
 					}				
@@ -646,7 +648,7 @@ class GoogleDriveModule extends AApiModule
 			switch($oFileInfo->mimeType)
 			{
 				case 'application/vnd.google-apps.document':
-					if (is_array($oFileInfo->exportLinks))
+					if (\is_array($oFileInfo->exportLinks))
 					{
 						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 					}
@@ -657,7 +659,7 @@ class GoogleDriveModule extends AApiModule
 					$oFileInfo->title = $oFileInfo->title . '.docx';
 					break;
 				case 'application/vnd.google-apps.spreadsheet':
-					if (is_array($oFileInfo->exportLinks))
+					if (\is_array($oFileInfo->exportLinks))
 					{
 						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
 					}
@@ -668,7 +670,7 @@ class GoogleDriveModule extends AApiModule
 					$oFileInfo->title = $oFileInfo->title . '.xlsx';
 					break;
 				case 'application/vnd.google-apps.drawing':
-					if (is_array($oFileInfo->exportLinks))
+					if (\is_array($oFileInfo->exportLinks))
 					{
 						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['image/png'];
 					}
@@ -679,7 +681,7 @@ class GoogleDriveModule extends AApiModule
 					$oFileInfo->title = $oFileInfo->title . '.png';
 					break;
 				case 'application/vnd.google-apps.presentation':
-					if (is_array($oFileInfo->exportLinks))
+					if (\is_array($oFileInfo->exportLinks))
 					{
 						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.presentationml.presentation'];
 					}
@@ -696,10 +698,10 @@ class GoogleDriveModule extends AApiModule
 	protected function GetIdByLink($sLink)
 	{
 		$matches = array();
-		preg_match("%https://\w+\.google\.com/\w+/d/(.*?)/.*%", $sLink, $matches);
+		\preg_match("%https://\w+\.google\.com/\w+/d/(.*?)/.*%", $sLink, $matches);
 		if (!isset($matches[1]))
 		{
-			preg_match("%https://\w+\.google\.com/open\?id=(.*)%", $sLink, $matches);
+			\preg_match("%https://\w+\.google\.com/open\?id=(.*)%", $sLink, $matches);
 		}
 
 		return isset($matches[1]) ? $matches[1] : '';			
