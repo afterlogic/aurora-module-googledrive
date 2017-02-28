@@ -20,7 +20,7 @@
 
 namespace Aurora\Modules;
 
-class GoogleDriveModule extends \AApiModule
+class GoogleDriveModule extends \Aurora\System\AbstractModule
 {
 	protected static $sService = 'google';
 	
@@ -61,11 +61,11 @@ class GoogleDriveModule extends \AApiModule
 	
 	public function onAfterGetStorages($aArgs, &$mResult)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 
 		$bEnableGoogleModule = false;
-		$oGoogleModule = \CApi::GetModule('Google');
-		if ($oGoogleModule instanceof \AApiModule)
+		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
+		if ($oGoogleModule instanceof \Aurora\System\AbstractModule)
 		{
 			$bEnableGoogleModule = $oGoogleModule->getConfig('EnableModule', false);
 		}
@@ -74,7 +74,7 @@ class GoogleDriveModule extends \AApiModule
 			$bEnableGoogleModule = false;
 		}
 		
-		$oOAuthAccount = \CApi::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
+		$oOAuthAccount = \Aurora\System\Api::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
 
 		if ($oOAuthAccount instanceof \COAuthAccount && 
 				$oOAuthAccount->Type === self::$sService && $bEnableGoogleModule &&
@@ -90,10 +90,10 @@ class GoogleDriveModule extends \AApiModule
 	
 	protected function GetClient()
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
-		$oGoogleModule = \CApi::GetModule('Google');
-		if ($oGoogleModule instanceof \AApiModule)
+		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
+		if ($oGoogleModule instanceof \Aurora\System\AbstractModule)
 		{
 			if (!$oGoogleModule->getConfig('EnableModule', false) || !$this->issetScope('storage'))
 			{
@@ -106,11 +106,11 @@ class GoogleDriveModule extends \AApiModule
 		}
 
 		$mResult = false;
-		$oOAuthIntegratorWebclientModule = \CApi::GetModuleDecorator('OAuthIntegratorWebclient');
+		$oOAuthIntegratorWebclientModule = \Aurora\System\Api::GetModuleDecorator('OAuthIntegratorWebclient');
 		$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sService);
 		if ($oSocialAccount)
 		{
-			$oGoogleModule = \CApi::GetModuleDecorator('Google');
+			$oGoogleModule = \Aurora\System\Api::GetModuleDecorator('Google');
 			if ($oGoogleModule)
 			{
 				$oClient = new \Google_Client();
@@ -161,7 +161,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	protected function PopulateFileInfo($sType, $sPath, $oFile)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
 		$mResult = false;
 		if ($oFile)
@@ -211,7 +211,7 @@ class GoogleDriveModule extends \AApiModule
 		$mResult = false;
 		if ($aArgs['Type'] === self::$sService)
 		{
-			\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+			\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 			$oFileInfo = $this->_getFileInfo($aArgs['Name']);
 			if ($oFileInfo)
 			{
@@ -273,7 +273,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onAfterGetFiles($aArgs, &$mResult)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
 		if ($aArgs['Type'] === self::$sService)
 		{
@@ -346,7 +346,7 @@ class GoogleDriveModule extends \AApiModule
 				'IsThumb' => false
 			);
 			$mResult = false;
-			\CApi::GetModuleManager()->broadcastEvent(
+			\Aurora\System\Api::GetModuleManager()->broadcastEvent(
 				'Files',
 				'GetFile', 
 				$aArgs,
@@ -354,7 +354,7 @@ class GoogleDriveModule extends \AApiModule
 			);	
 			if (\is_resource($mResult))
 			{
-				$aUrlFileInfo = \api_Utils::parseIniString(\stream_get_contents($mResult));
+				$aUrlFileInfo = \Aurora\System\Utils::parseIniString(\stream_get_contents($mResult));
 				if ($aUrlFileInfo && isset($aUrlFileInfo['URL']))
 				{
 					if ((false !== \strpos($aUrlFileInfo['URL'], 'drive.google.com')))
@@ -372,7 +372,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onAfterCreateFolder(&$aArgs, &$mResult)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
 		if ($aArgs['Type'] === self::$sService)
 		{
@@ -410,7 +410,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onCreateFile($aArgs, &$Result)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 
 		if ($aArgs['Type'] === self::$sService)
 		{
@@ -464,7 +464,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onAfterDelete(&$aData, &$mResult)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
 		if ($aData['Type'] === self::$sService)
 		{
@@ -495,7 +495,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onAfterRename(&$aData, &$mResult)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
 		if ($aData['Type'] === self::$sService)
 		{
@@ -530,7 +530,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onAfterMove(&$aData, &$mResult)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
 		if ($aData['FromType'] === self::$sService)
 		{
@@ -572,7 +572,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onAfterCopy(&$aData, &$mResult)
 	{
-		\CApi::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
 		
 		if ($aData['FromType'] === self::$sService)
 		{
@@ -750,7 +750,7 @@ class GoogleDriveModule extends \AApiModule
 	 */
 	public function onGetSettings($aArgs, &$mResult)
 	{
-		$oUser = \CApi::getAuthenticatedUser();
+		$oUser = \Aurora\System\Api::getAuthenticatedUser();
 		
 		if (!empty($oUser))
 		{
