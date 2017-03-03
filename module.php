@@ -20,7 +20,7 @@
 
 namespace Aurora\Modules;
 
-class GoogleDriveModule extends \Aurora\System\AbstractModule
+class GoogleDriveModule extends \Aurora\System\Module\AbstractModule
 {
 	protected static $sService = 'google';
 	
@@ -65,7 +65,7 @@ class GoogleDriveModule extends \Aurora\System\AbstractModule
 
 		$bEnableGoogleModule = false;
 		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
-		if ($oGoogleModule instanceof \Aurora\System\AbstractModule)
+		if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule)
 		{
 			$bEnableGoogleModule = $oGoogleModule->getConfig('EnableModule', false);
 		}
@@ -93,7 +93,7 @@ class GoogleDriveModule extends \Aurora\System\AbstractModule
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
 		
 		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
-		if ($oGoogleModule instanceof \Aurora\System\AbstractModule)
+		if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule)
 		{
 			if (!$oGoogleModule->getConfig('EnableModule', false) || !$this->issetScope('storage'))
 			{
