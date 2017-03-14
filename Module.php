@@ -625,8 +625,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 					}
 					if ($oFileInfo->mimeType === "application/vnd.google-apps.folder")
 					{
-						$oItem->MainAction = 'list';
-						$oItem->UnshiftAction('list');
+						$oItem->UnshiftAction(array(
+							'list' => array()
+						));
 						
 						$oItem->Thumb = true;
 						$oItem->ThumbnailLink = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/drive.png';
