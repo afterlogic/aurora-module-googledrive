@@ -169,12 +169,31 @@ class Module extends \Aurora\System\Module\AbstractModule
 			$mResult->Path = '';
 			$mResult->Size = $oFile->fileSize;
 			$mResult->FullPath = $oFile->id;
-			if (isset($oFile->thumbnailLink))
+			if (isset($oFile->thumbnailUrl))
 			{
 				$mResult->Thumb = true;
-				$mResult->ThumbnailLink = $oFile->thumbnailLink;
+				$mResult->ThumbnailUrl = $oFile->thumbnailUrl;
 			}
 			
+			if ($mResult->IsFolder)
+			{
+				$mResult->AddAction([
+					'list' => []
+				]);
+			}
+			else
+			{
+				$mResult->AddAction([
+					'view' => [
+						'url' => '?download-file/' . $this->getItemHash($mResult) .'/view'
+					]
+				]);
+				$mResult->AddAction([
+					'download' => [
+						'url' => '?download-file/' . $this->getItemHash($mResult)
+					]
+				]);
+			}
 
 //				$oItem->Owner = $oSocial->Name;
 			$mResult->LastModified = \date_timestamp_get(date_create($oFile->createdDate));
@@ -195,6 +214,22 @@ class Module extends \Aurora\System\Module\AbstractModule
 		
 		return $mResult;
 	}
+	
+	
+	/**
+	 * 
+	 * @param type $oItem
+	 * @return type
+	 */
+	public function getItemHash($oItem)
+	{
+		return \Aurora\System\Api::EncodeKeyValues(array(
+			'UserId' => \Aurora\System\Api::getAuthenticatedUserId(), 
+			'Type' => $oItem->TypeStr,
+			'Path' => '',
+			'Name' => $oItem->FullPath
+		));			
+	}	
 	
 	/**
 	 * @param \CAccount $oAccount
@@ -614,7 +649,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 					if (isset($oFileInfo->thumbnailLink))
 					{
 						$oItem->Thumb = true;
-						$oItem->ThumbnailLink = $oFileInfo->thumbnailLink;
+						$oItem->ThumbnailUrl = $oFileInfo->thumbnailLink;
 					}
 					if ($oFileInfo->mimeType === "application/vnd.google-apps.folder")
 					{
@@ -623,7 +658,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 						));
 						
 						$oItem->Thumb = true;
-						$oItem->ThumbnailLink = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/drive.png';
+						$oItem->ThumbnailUrl = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/drive.png';
 					}
 					else
 					{
