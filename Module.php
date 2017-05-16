@@ -169,6 +169,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 			$mResult->Path = '';
 			$mResult->Size = $oFile->fileSize;
 			$mResult->FullPath = $oFile->id;
+			$mResult->ContentType = $oFile->mimeType;
 			if (isset($oFile->thumbnailUrl))
 			{
 				$mResult->Thumb = true;
