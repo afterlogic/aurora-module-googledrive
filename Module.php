@@ -54,7 +54,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	
 	public function onAfterGetStorages($aArgs, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 
 		$bEnableGoogleModule = false;
 		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
@@ -83,7 +83,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	
 	protected function GetClient()
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 		
 		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
 		if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule)
@@ -154,7 +154,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	protected function PopulateFileInfo($sType, $sPath, $oFile)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 		
 		$mResult = false;
 		if ($oFile)
@@ -240,7 +240,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$mResult = false;
 		if ($aArgs['Type'] === self::$sService)
 		{
-			\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+			\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 			$oFileInfo = $this->_getFileInfo($aArgs['Name']);
 			if ($oFileInfo)
 			{
@@ -302,7 +302,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onAfterGetFiles($aArgs, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::Anonymous);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 		
 		if ($aArgs['Type'] === self::$sService)
 		{
@@ -401,7 +401,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onAfterCreateFolder(&$aArgs, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
 		
 		if ($aArgs['Type'] === self::$sService)
 		{
@@ -439,7 +439,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onCreateFile($aArgs, &$Result)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
 
 		if ($aArgs['Type'] === self::$sService)
 		{
@@ -493,7 +493,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onAfterDelete(&$aData, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
 		
 		if ($aData['Type'] === self::$sService)
 		{
@@ -524,7 +524,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onAfterRename(&$aData, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
 		
 		if ($aData['Type'] === self::$sService)
 		{
@@ -559,7 +559,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onAfterMove(&$aData, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
 		
 		if ($aData['FromType'] === self::$sService)
 		{
@@ -601,7 +601,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onAfterCopy(&$aData, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\EUserRole::NormalUser);
+		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
 		
 		if ($aData['FromType'] === self::$sService)
 		{
@@ -789,12 +789,12 @@ class Module extends \Aurora\System\Module\AbstractModule
 				'Description' => $this->i18N('SCOPE_FILESTORAGE', $oUser->EntityId),
 				'Value' => false
 			);
-			if ($oUser->Role === \EUserRole::SuperAdmin)
+			if ($oUser->Role === \Aurora\System\Enums\UserRole::SuperAdmin)
 			{
 				$aScope['Value'] = $this->issetScope('storage');
 				$mResult['Scopes'][] = $aScope;
 			}
-			if ($oUser->Role === \EUserRole::NormalUser)
+			if ($oUser->Role === \Aurora\System\Enums\UserRole::NormalUser)
 			{
 				if ($aArgs['OAuthAccount'] instanceof \COAuthAccount)
 				{
