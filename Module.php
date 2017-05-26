@@ -67,7 +67,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 			$bEnableGoogleModule = false;
 		}
 		
-		$oOAuthAccount = \Aurora\System\Api::GetModuleDecorator('OAuthIntegratorWebclient')->GetAccount(self::$sService);
+		$oOAuthAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount(self::$sService);
 
 		if ($oOAuthAccount instanceof \COAuthAccount && 
 				$oOAuthAccount->Type === self::$sService && $bEnableGoogleModule &&
@@ -99,11 +99,11 @@ class Module extends \Aurora\System\Module\AbstractModule
 		}
 
 		$mResult = false;
-		$oOAuthIntegratorWebclientModule = \Aurora\System\Api::GetModuleDecorator('OAuthIntegratorWebclient');
+		$oOAuthIntegratorWebclientModule = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator();
 		$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sService);
 		if ($oSocialAccount)
 		{
-			$oGoogleModule = \Aurora\System\Api::GetModuleDecorator('Google');
+			$oGoogleModule = \Aurora\Modules\Google\Module::Decorator();
 			if ($oGoogleModule)
 			{
 				$oClient = new \Google_Client();
