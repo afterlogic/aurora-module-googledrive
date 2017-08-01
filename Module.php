@@ -786,7 +786,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 		{
 			$aScope = array(
 				'Name' => 'storage',
-				'Description' => $this->i18N('SCOPE_FILESTORAGE', $oUser->EntityId),
+				'Description' => $this->i18N('SCOPE_FILESTORAGE'),
 				'Value' => false
 			);
 			if ($oUser->Role === \Aurora\System\Enums\UserRole::SuperAdmin)
