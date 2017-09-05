@@ -160,7 +160,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 		if ($oFile)
 		{
 			$this->PopulateGoogleDriveFileInfo($oFile);
-			$mResult /*@var $mResult \CFileStorageItem */ = new  \CFileStorageItem();
+			$mResult /*@var $mResult \Aurora\Modules\Files\Classes\FileItem */ = new  \Aurora\Modules\Files\Classes\FileItem();
 			$mResult->IsExternal = true;
 			$mResult->TypeStr = $sType;
 			$mResult->IsFolder = ($oFile->mimeType === "application/vnd.google-apps.folder");
@@ -233,7 +233,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}	
 	
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterGetFileInfo($aArgs)
 	{
@@ -298,7 +298,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}
 
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterGetFiles($aArgs, &$mResult)
 	{
@@ -351,7 +351,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 				foreach($aFileItems as $oChild) 
 				{
-					$oItem /*@var $oItem \CFileStorageItem */ = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oChild);
+					$oItem /*@var $oItem \Aurora\Modules\Files\Classes\FileItem */ = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oChild);
 					if ($oItem)
 					{
 						$mResult['Items'][] = $oItem;
@@ -397,7 +397,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}
 	
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterCreateFolder(&$aArgs, &$mResult)
 	{
@@ -435,7 +435,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}	
 
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onCreateFile($aArgs, &$Result)
 	{
@@ -489,7 +489,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}	
 
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterDelete(&$aData, &$mResult)
 	{
@@ -520,7 +520,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}	
 
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterRename(&$aData, &$mResult)
 	{
@@ -555,7 +555,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}	
 
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterMove(&$aData, &$mResult)
 	{
@@ -597,7 +597,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	}	
 
 	/**
-	 * @param \CAccount $oAccount
+	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterCopy(&$aData, &$mResult)
 	{
