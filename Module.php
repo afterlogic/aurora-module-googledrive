@@ -313,6 +313,23 @@ class Module extends \Aurora\System\Module\AbstractModule
 				$mResult['Items']  = array();
 				$oDrive = new \Google_Service_Drive($oClient);
 				$sPath = \ltrim(\basename($aArgs['Path']), '/');
+				
+				$oPathInfo = $oDrive->files->get($sPath);
+				if ($oPathInfo && count($oPathInfo->parents) > 0)
+				{
+					$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
+					foreach ($oPathInfo->parents as $oPathInfoItem)
+					{
+						if (!$oPathInfoItem->isRoot)
+						{
+							$oItem = $oDrive->files->get($oPathInfoItem->id);
+							if ($oItem)
+							{
+								$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
+							}
+						}
+					}
+				}
 
 				$aFileItems = array();
 				$sPageToken = NULL;			
