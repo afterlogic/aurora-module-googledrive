@@ -314,30 +314,6 @@ class Module extends \Aurora\System\Module\AbstractModule
 				$oDrive = new \Google_Service_Drive($oClient);
 				$sPath = \ltrim(\basename($aArgs['Path']), '/');
 				
-				$mResult['Path'] = array();
-				if (!empty($sPath))
-				{
-					$oPathInfo = $oDrive->files->get($sPath);
-					$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
-					while (true)
-					{
-						$aParrents = $oDrive->parents->listParents($sPath);
-						if ($aParrents == null ||count($aParrents) == 0)
-						{
-							break;
-						}
-						$oParrent = $aParrents[0];
-						$sPath = $oParrent->id;
-						if (!$oParrent->isRoot)
-						{
-							$oItem = $oDrive->files->get($sPath);
-							if ($oItem)
-							{
-								$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
-							}
-						}
-					}
-				}
 				$aFileItems = array();
 				$sPageToken = NULL;			
 
@@ -379,6 +355,31 @@ class Module extends \Aurora\System\Module\AbstractModule
 					if ($oItem)
 					{
 						$mResult['Items'][] = $oItem;
+					}
+				}
+				
+				$mResult['Path'] = array();
+				if ($sPath !== 'root')
+				{
+					$oPathInfo = $oDrive->files->get($sPath);
+					$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
+					while (true)
+					{
+						$aParrents = $oDrive->parents->listParents($sPath);
+						if ($aParrents == null ||count($aParrents) == 0)
+						{
+							break;
+						}
+						$oParrent = $aParrents[0];
+						$sPath = $oParrent->id;
+						if (!$oParrent->isRoot)
+						{
+							$oItem = $oDrive->files->get($sPath);
+							if ($oItem)
+							{
+								$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
+							}
+						}
 					}
 				}
 			}
