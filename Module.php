@@ -315,22 +315,25 @@ class Module extends \Aurora\System\Module\AbstractModule
 				$sPath = \ltrim(\basename($aArgs['Path']), '/');
 				
 				$oPathInfo = $oDrive->files->get($sPath);
-				if ($oPathInfo && count($oPathInfo->parents) > 0)
+				$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
+				while (true)
 				{
-					$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
-					foreach ($oPathInfo->parents as $oPathInfoItem)
+					$aParrents = $oDrive->parents->listParents($sPath);
+				    if ($aParrents == null ||count($aParrents) == 0)
 					{
-						if (!$oPathInfoItem->isRoot)
+						break;
+					}
+					$oParrent = $aParrents[0];
+					$sPath = $oParrent->id;
+					if (!$oParrent->isRoot)
+					{
+						$oItem = $oDrive->files->get($sPath);
+						if ($oItem)
 						{
-							$oItem = $oDrive->files->get($oPathInfoItem->id);
-							if ($oItem)
-							{
-								$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
-							}
+							$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
 						}
 					}
 				}
-
 				$aFileItems = array();
 				$sPageToken = NULL;			
 
