@@ -216,7 +216,6 @@ class Module extends \Aurora\System\Module\AbstractModule
 		return $mResult;
 	}
 	
-	
 	/**
 	 * 
 	 * @param type $oItem
