@@ -235,20 +235,18 @@ class Module extends \Aurora\System\Module\AbstractModule
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
-	public function onAfterGetFileInfo($aArgs)
+	public function onAfterGetFileInfo($aArgs, &$mResult)
 	{
-		$mResult = false;
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
 			\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
-			$oFileInfo = $this->_getFileInfo($aArgs['Name']);
+			$oFileInfo = $this->_getFileInfo($aArgs['Id']);
 			if ($oFileInfo)
 			{
 				$mResult = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oFileInfo);
+				return true;
 			}
 		}
-		
-		return $mResult;
 	}	
 	
 	/**
@@ -261,7 +259,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 			if ($oClient)
 			{
 				$oDrive = new \Google_Service_Drive($oClient);
-				$oFile = $oDrive->files->get($aArgs['Name']);
+				$oFile = $oDrive->files->get($aArgs['Id']);
 				
 				$aArgs['Name'] = $oFile->originalFilename;
 
