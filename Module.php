@@ -356,26 +356,29 @@ class Module extends \Aurora\System\Module\AbstractModule
 					}
 				}
 				
-				$mResult['Path'] = array();
-				if ($sPath !== 'root')
+				if (isset($aArgs['PathRequired']) && $aArgs['PathRequired'] === true)
 				{
-					$oPathInfo = $oDrive->files->get($sPath);
-					$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
-					while (true)
+					$mResult['Path'] = array();
+					if ($sPath !== 'root')
 					{
-						$aParrents = $oDrive->parents->listParents($sPath);
-						if ($aParrents == null ||count($aParrents) == 0)
+						$oPathInfo = $oDrive->files->get($sPath);
+						$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
+						while (true)
 						{
-							break;
-						}
-						$oParrent = $aParrents[0];
-						$sPath = $oParrent->id;
-						if (!$oParrent->isRoot)
-						{
-							$oItem = $oDrive->files->get($sPath);
-							if ($oItem)
+							$aParrents = $oDrive->parents->listParents($sPath);
+							if ($aParrents == null ||count($aParrents) == 0)
 							{
-								$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
+								break;
+							}
+							$oParrent = $aParrents[0];
+							$sPath = $oParrent->id;
+							if (!$oParrent->isRoot)
+							{
+								$oItem = $oDrive->files->get($sPath);
+								if ($oItem)
+								{
+									$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
+								}
 							}
 						}
 					}
