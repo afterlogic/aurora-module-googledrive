@@ -44,7 +44,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$this->subscribeEvent('Files::Move::after', array($this, 'onAfterMove'));
 		$this->subscribeEvent('Files::Copy::after', array($this, 'onAfterCopy')); 
 		$this->subscribeEvent('Files::CheckUrl', array($this, 'onAfterCheckUrl'));
-		$this->subscribeEvent('Files::PopulateFileItem', array($this, 'onPopulateFileItem'));
+		$this->subscribeEvent('PopulateFileItem', array($this, 'onPopulateFileItem'));
 		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
 		$this->subscribeEvent('Google::UpdateSettings::after', array($this, 'onAfterUpdateSettings'));
 		
