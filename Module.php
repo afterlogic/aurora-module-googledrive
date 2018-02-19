@@ -222,7 +222,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 * @param type $oItem
 	 * @return type
 	 */
-	public function getItemHash($oItem)
+	protected function getItemHash($oItem)
 	{
 		return \Aurora\System\Api::EncodeKeyValues(array(
 			'UserId' => \Aurora\System\Api::getAuthenticatedUserId(), 
