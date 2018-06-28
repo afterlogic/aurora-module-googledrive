@@ -35,11 +35,11 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$this->subscribeEvent('Files::GetFile', array($this, 'onGetFile'));
 		$this->subscribeEvent('Files::GetFiles::after', array($this, 'onAfterGetFiles'));
 		$this->subscribeEvent('Files::GetFileInfo::after', array($this, 'onAfterGetFileInfo'));
-		$this->subscribeEvent('Files::GetFile::after', array($this, 'onAfterGetFile'));
+//		$this->subscribeEvent('Files::GetFile::after', array($this, 'onAfterGetFile'));
 		$this->subscribeEvent('Files::CreateFolder::after', array($this, 'onAfterCreateFolder'));
 		$this->subscribeEvent('Files::CreateFile', array($this, 'onCreateFile'));
-		$this->subscribeEvent('Files::CreatePublicLink::after', array($this, 'onAfterCreatePublicLink'));
-		$this->subscribeEvent('Files::DeletePublicLink::after', array($this, 'onAfterDeletePublicLink'));
+//		$this->subscribeEvent('Files::CreatePublicLink::after', array($this, 'onAfterCreatePublicLink'));
+//		$this->subscribeEvent('Files::DeletePublicLink::after', array($this, 'onAfterDeletePublicLink'));
 		$this->subscribeEvent('Files::Delete::after', array($this, 'onAfterDelete'));
 		$this->subscribeEvent('Files::Rename::after', array($this, 'onAfterRename'));
 		$this->subscribeEvent('Files::Move::after', array($this, 'onAfterMove'));
@@ -246,8 +246,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 			if ($oFileInfo)
 			{
 				$mResult = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oFileInfo);
-				return true;
 			}
+			return false;
 		}
 	}	
 	
@@ -275,10 +275,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$Result = \fopen('php://memory','r+');
 					\fwrite($Result, $oHttpRequest->getResponseBody());
 					\rewind($Result);
-					
-					return true;
 				} 
 			}
+			return false;
 		}
 	}	
 	
@@ -386,6 +385,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					}
 				}
 			}
+			
+			return false;
 		}
 	}	
 
@@ -459,6 +460,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$mResult = false;
 				}				
 			}
+			
+			return false;
 		}
 	}	
 
@@ -513,6 +516,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$Result = false;
 				}				
 			}
+			
+			return false;
 		}
 	}	
 
@@ -544,6 +549,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					}
 				}
 			}
+			
+			return false;
 		}
 	}	
 
@@ -579,6 +586,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$mResult = false;
 				}
 			}
+			
+			return false;
 		}
 	}	
 
@@ -621,6 +630,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					}
 				}
 			}
+			
+			return false;
 		}
 	}	
 
@@ -661,6 +672,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					}				
 				}
 			}
+			
+			return false;
 		}
 	}		
 	
@@ -694,7 +707,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 						$oItem->Size = isset($oFileInfo->fileSize) ? $oFileInfo->fileSize : $oItem->Size;
 					}
 				}				
-				return true;
+				return false;
 			}
 		}
 	}	
