@@ -386,6 +386,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 					}
 				}
 			}
+			
+			return true;
 		}
 	}	
 
