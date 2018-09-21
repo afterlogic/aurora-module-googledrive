@@ -33,7 +33,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	{
 		$this->subscribeEvent('Files::GetStorages::after', array($this, 'onAfterGetStorages'));
 		$this->subscribeEvent('Files::GetFile', array($this, 'onGetFile'));
-		$this->subscribeEvent('Files::GetFiles::after', array($this, 'onAfterGetFiles'));
+		$this->subscribeEvent('Files::GetItems::after', array($this, 'onAfterGetItems'));
 		$this->subscribeEvent('Files::GetFileInfo::after', array($this, 'onAfterGetFileInfo'));
 		$this->subscribeEvent('Files::GetFile::after', array($this, 'onAfterGetFile'));
 		$this->subscribeEvent('Files::CreateFolder::after', array($this, 'onAfterCreateFolder'));
@@ -50,7 +50,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
 		$this->subscribeEvent('Google::UpdateSettings::after', array($this, 'onAfterUpdateSettings'));
 		
-		$this->subscribeEvent('Files::GetFiles::before', array($this, 'CheckUrlFile'));
+		$this->subscribeEvent('Files::GetItems::before', array($this, 'CheckUrlFile'));
 		$this->subscribeEvent('Files::UploadFile::before', array($this, 'CheckUrlFile'));
 		$this->subscribeEvent('Files::CreateFolder::before', array($this, 'CheckUrlFile'));
 	}
@@ -300,10 +300,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
-	public function onAfterGetFiles($aArgs, &$mResult)
+	public function onAfterGetItems($aArgs, &$mResult)
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
-		
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
 			$mResult['Items'] = array();
