@@ -687,7 +687,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 						));
 						
 						$oItem->Thumb = true;
-						$oItem->ThumbnailUrl = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . $this->GetName() . '/images/drive.png';
+						$oItem->ThumbnailUrl = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . self::GetName() . '/images/drive.png';
 					}
 					else
 					{
