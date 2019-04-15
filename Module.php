@@ -304,11 +304,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 	{
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
-			$mResult['Items'] = array();
+			$mResult = array();
 			$oClient = $this->GetClient();
 			if ($oClient)
 			{
-				$mResult['Items']  = array();
 				$oDrive = new \Google_Service_Drive($oClient);
 				$sPath = \ltrim(\basename($aArgs['Path']), '/');
 				
@@ -352,7 +351,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$oItem /*@var $oItem \Aurora\Modules\Files\Classes\FileItem */ = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oChild);
 					if ($oItem)
 					{
-						$mResult['Items'][] = $oItem;
+						$mResult[] = $oItem;
 					}
 				}
 				
