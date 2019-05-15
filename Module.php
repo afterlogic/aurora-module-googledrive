@@ -823,7 +823,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 				$aScope['Value'] = $this->issetScope('storage');
 				$mResult['Scopes'][] = $aScope;
 			}
-			if ($oUser->Role === \Aurora\System\Enums\UserRole::NormalUser)
+			if ($oUser->isNormalOrTenant())
 			{
 				if ($aArgs['OAuthAccount'] instanceof \Aurora\Modules\OAuthIntegratorWebclient\Classes\Account)
 				{
