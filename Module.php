@@ -19,6 +19,7 @@ namespace Aurora\Modules\GoogleDrive;
 class Module extends \Aurora\System\Module\AbstractModule
 {
 	protected static $sStorageType = 'google';
+	protected static $iStorageOrder = 200;
 	
 	protected $aRequireModules = array(
 		'Files', 
@@ -81,7 +82,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 			$mResult[] = [
 				'Type' => self::$sStorageType, 
 				'IsExternal' => true,
-				'DisplayName' => 'Google Drive'
+				'DisplayName' => 'Google Drive',
+				'Order' => self::$iStorageOrder, 
 			];
 		}
 	}
