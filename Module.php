@@ -34,6 +34,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	
 	public function init() 
 	{
+		$this->subscribeEvent('GoogleAuthWebclient::PopulateScopes', array($this, 'onPopulateScopes'));
 		$this->subscribeEvent('Files::GetStorages::after', array($this, 'onAfterGetStorages'));
 		$this->subscribeEvent('Files::GetFile', array($this, 'onGetFile'));
 		$this->subscribeEvent('Files::GetItems::after', array($this, 'onAfterGetItems'));
@@ -58,6 +59,18 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$this->subscribeEvent('Files::CreateFolder::before', array($this, 'CheckUrlFile'));
 	}
 	
+	public function onPopulateScopes($sScope, &$aResult)
+	{
+		$aScopes = \explode('|', $sScope);
+		foreach ($aScopes as $sScope)
+		{
+			if ($sScope === 'storage')
+			{
+				$aResult[] = 'https://www.googleapis.com/auth/drive';
+			}
+		}
+	}
+
 	public function onAfterGetStorages($aArgs, &$mResult)
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
