@@ -9,7 +9,7 @@ namespace Aurora\Modules\GoogleDrive;
 
 /**
  * Adds ability to work with Google Drive file storage inside Aurora Files module.
- * 
+ *
  * @license https://www.gnu.org/licenses/agpl-3.0.html AGPL-3.0
  * @license https://afterlogic.com/products/common-licensing Afterlogic Software License
  * @copyright Copyright (c) 2019, Afterlogic Corp.
@@ -20,19 +20,19 @@ class Module extends \Aurora\System\Module\AbstractModule
 {
 	protected static $sStorageType = 'google';
 	protected static $iStorageOrder = 200;
-	
+
 	protected $aRequireModules = array(
-		'Files', 
-		'OAuthIntegratorWebclient', 
+		'Files',
+		'OAuthIntegratorWebclient',
 		'GoogleAuthWebclient'
 	);
-	
+
 	protected function issetScope($sScope)
 	{
 		return \in_array($sScope, \explode(' ', $this->getConfig('Scopes')));
-	}	
-	
-	public function init() 
+	}
+
+	public function init()
 	{
 		$this->subscribeEvent('GoogleAuthWebclient::PopulateScopes', array($this, 'onPopulateScopes'));
 		$this->subscribeEvent('Files::GetStorages::after', array($this, 'onAfterGetStorages'));
@@ -47,18 +47,22 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$this->subscribeEvent('Files::Delete::after', array($this, 'onAfterDelete'));
 		$this->subscribeEvent('Files::Rename::after', array($this, 'onAfterRename'));
 		$this->subscribeEvent('Files::Move::after', array($this, 'onAfterMove'));
-		$this->subscribeEvent('Files::Copy::after', array($this, 'onAfterCopy')); 
+		$this->subscribeEvent('Files::Copy::after', array($this, 'onAfterCopy'));
 		$this->subscribeEvent('Files::CheckUrl', array($this, 'onAfterCheckUrl'));
 		$this->subscribeEvent('Files::PopulateFileItem::after', array($this, 'onAfterPopulateFileItem'));
 
 		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
 		$this->subscribeEvent('Google::UpdateSettings::after', array($this, 'onAfterUpdateSettings'));
-		
+
 		$this->subscribeEvent('Files::GetItems::before', array($this, 'CheckUrlFile'));
 		$this->subscribeEvent('Files::UploadFile::before', array($this, 'CheckUrlFile'));
 		$this->subscribeEvent('Files::CreateFolder::before', array($this, 'CheckUrlFile'));
+
+		$this->subscribeEvent('Files::CheckQuota::after', array($this, 'onAfterCheckQuota'));
+		$this->subscribeEvent('Files::GetQuota::after', array($this, 'onAfterGetQuota'));
+
 	}
-	
+
 	public function onPopulateScopes($sScope, &$aResult)
 	{
 		$aScopes = \explode('|', $sScope);
@@ -85,26 +89,26 @@ class Module extends \Aurora\System\Module\AbstractModule
 		{
 			$bEnableGoogleModule = false;
 		}
-		
+
 		$oOAuthAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount(self::$sStorageType);
 
-		if ($oOAuthAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Classes\Account && 
+		if ($oOAuthAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Classes\Account &&
 				$oOAuthAccount->Type === self::$sStorageType && $bEnableGoogleModule &&
 					$this->issetScope('storage') && $oOAuthAccount->issetScope('storage'))
-		{		
+		{
 			$mResult[] = [
-				'Type' => self::$sStorageType, 
+				'Type' => self::$sStorageType,
 				'IsExternal' => true,
 				'DisplayName' => 'Google Drive',
-				'Order' => self::$iStorageOrder, 
+				'Order' => self::$iStorageOrder,
 			];
 		}
 	}
-	
+
 	protected function GetClient()
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
-		
+
 		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
 		if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule)
 		{
@@ -141,32 +145,32 @@ class Module extends \Aurora\System\Module\AbstractModule
 				{
 					$bRefreshToken = true;
 				}
-				if ($oClient->isAccessTokenExpired() || $bRefreshToken) 
+				if ($oClient->isAccessTokenExpired() || $bRefreshToken)
 				{
 					$oClient->refreshToken($oSocialAccount->RefreshToken);
 					$oSocialAccount->AccessToken = $oClient->getAccessToken();
 					$oOAuthIntegratorWebclientModule->UpdateAccount($oSocialAccount);
-				}				
+				}
 				if ($oClient->getAccessToken())
 				{
 					$mResult = $oClient;
 				}
 			}
 		}
-		
+
 		return $mResult;
-	}	
+	}
 
 	protected function _dirname($sPath)
 	{
 		$sPath = \dirname($sPath);
-		return \str_replace(DIRECTORY_SEPARATOR, '/', $sPath); 
+		return \str_replace(DIRECTORY_SEPARATOR, '/', $sPath);
 	}
-	
+
 	protected function _basename($sPath)
 	{
 		$aPath = \explode('/', $sPath);
-		return \end($aPath); 
+		return \end($aPath);
 	}
 
 	/**
@@ -175,7 +179,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	protected function PopulateFileInfo($sType, $sPath, $oFile)
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
-		
+
 		$mResult = false;
 		if ($oFile)
 		{
@@ -195,7 +199,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 				$mResult->Thumb = true;
 				$mResult->ThumbnailUrl = $oFile->thumbnailUrl;
 			}
-			
+
 			if ($mResult->IsFolder)
 			{
 				$mResult->AddAction([
@@ -221,8 +225,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 		}
 
 		return $mResult;
-	}	
-	
+	}
+
 	protected function _getFileInfo($sName)
 	{
 		$mResult = false;
@@ -232,25 +236,25 @@ class Module extends \Aurora\System\Module\AbstractModule
 			$oDrive = new \Google_Service_Drive($oClient);
 			$mResult = $oDrive->files->get($sName);
 		}
-		
+
 		return $mResult;
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param type $oItem
 	 * @return type
 	 */
 	protected function getItemHash($oItem)
 	{
 		return \Aurora\System\Api::EncodeKeyValues(array(
-			'UserId' => \Aurora\System\Api::getAuthenticatedUserId(), 
+			'UserId' => \Aurora\System\Api::getAuthenticatedUserId(),
 			'Type' => $oItem->TypeStr,
 			'Path' => '',
 			'Name' => $oItem->FullPath
-		));			
-	}	
-	
+		));
+	}
+
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
@@ -266,8 +270,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 				return true;
 			}
 		}
-	}	
-	
+	}
+
 	/**
 	 */
 	public function onGetFile($aArgs, &$Result)
@@ -279,26 +283,26 @@ class Module extends \Aurora\System\Module\AbstractModule
 			{
 				$oDrive = new \Google_Service_Drive($oClient);
 				$oFile = $oDrive->files->get($aArgs['Id']);
-				
-				$aArgs['Name'] = $oFile->originalFilename;
 
 				$this->PopulateGoogleDriveFileInfo($oFile);
+				$aArgs['Name'] = $oFile->title;
+
 				$oRequest = new \Google_Http_Request($oFile->downloadUrl, 'GET', null, null);
 				$oClientAuth = $oClient->getAuth();
 				$oClientAuth->sign($oRequest);
-				$oHttpRequest = $oClientAuth->authenticatedRequest($oRequest);			
-				if ($oHttpRequest->getResponseHttpCode() === 200) 
+				$oHttpRequest = $oClientAuth->authenticatedRequest($oRequest);
+				if ($oHttpRequest->getResponseHttpCode() === 200)
 				{
 					$Result = \fopen('php://memory','r+');
 					\fwrite($Result, $oHttpRequest->getResponseBody());
 					\rewind($Result);
-					
+
 					return true;
-				} 
+				}
 			}
 		}
-	}	
-	
+	}
+
 	public function CheckUrlFile(&$aArgs, &$mResult)
 	{
 		if (strpos($aArgs['Path'], '.url') !== false)
@@ -327,9 +331,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 			{
 				$oDrive = new \Google_Service_Drive($oClient);
 				$sPath = \ltrim(\basename($aArgs['Path']), '/');
-				
+
 				$aFileItems = array();
-				$sPageToken = NULL;			
+				$sPageToken = NULL;
 
 				if (empty($sPath))
 				{
@@ -342,12 +346,12 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$sQuery .= " and title contains '".$aArgs['Pattern']."'";
 				}
 
-				do 
+				do
 				{
-					try 
+					try
 					{
 						$aParameters = array('q' => $sQuery);
-						if ($sPageToken) 
+						if ($sPageToken)
 						{
 							$aParameters['pageToken'] = $sPageToken;
 						}
@@ -355,15 +359,15 @@ class Module extends \Aurora\System\Module\AbstractModule
 						$oFiles = $oDrive->files->listFiles($aParameters);
 						$aFileItems = \array_merge($aFileItems, $oFiles->getItems());
 						$sPageToken = $oFiles->getNextPageToken();
-					} 
-					catch (Exception $e) 
+					}
+					catch (Exception $e)
 					{
 						$sPageToken = NULL;
 					}
-				} 
-				while ($sPageToken);			
+				}
+				while ($sPageToken);
 
-				foreach($aFileItems as $oChild) 
+				foreach($aFileItems as $oChild)
 				{
 					$oItem /*@var $oItem \Aurora\Modules\Files\Classes\FileItem */ = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oChild);
 					if ($oItem)
@@ -371,14 +375,14 @@ class Module extends \Aurora\System\Module\AbstractModule
 						$mResult[] = $oItem;
 					}
 				}
-				
+
 				if (isset($aArgs['PathRequired']) && $aArgs['PathRequired'] === true)
 				{
 					$mResult['Path'] = array();
 					if ($sPath !== 'root')
 					{
 						$oPathInfo = $oDrive->files->get($sPath);
-						$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);						
+						$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);
 						while (true)
 						{
 							$aParrents = $oDrive->parents->listParents($sPath);
@@ -393,17 +397,17 @@ class Module extends \Aurora\System\Module\AbstractModule
 								$oItem = $oDrive->files->get($sPath);
 								if ($oItem)
 								{
-									$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);						
+									$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);
 								}
 							}
 						}
 					}
 				}
 			}
-			
+
 			return true;
 		}
-	}	
+	}
 
 	protected function prepareArgs(&$aData)
 	{
@@ -421,10 +425,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 			$mResult = false;
 			\Aurora\System\Api::GetModuleManager()->broadcastEvent(
 				'Files',
-				'GetFile', 
+				'GetFile',
 				$aArgs,
 				$mResult
-			);	
+			);
 			if (\is_resource($mResult))
 			{
 				$aUrlFileInfo = \Aurora\System\Utils::parseIniString(\stream_get_contents($mResult));
@@ -436,17 +440,17 @@ class Module extends \Aurora\System\Module\AbstractModule
 						$aData['Path'] = $this->GetIdByLink($aUrlFileInfo['URL']);
 					}
 				}
-			}		
+			}
 		}
 	}
-	
+
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
 	public function onAfterCreateFolder(&$aArgs, &$mResult)
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
-		
+
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
 			$oClient = $this->GetClient();
@@ -457,7 +461,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 				$folder->setMimeType('application/vnd.google-apps.folder');
 
 				// Set the parent folder.
-				if ($aArgs['Path'] != null) 
+				if ($aArgs['Path'] != null)
 				{
 				  $parent = new \Google_Service_Drive_ParentReference();
 				  $parent->setId($aArgs['Path']);
@@ -465,18 +469,18 @@ class Module extends \Aurora\System\Module\AbstractModule
 				}
 
 				$oDrive = new \Google_Service_Drive($oClient);
-				try 
+				try
 				{
 					$oDrive->files->insert($folder, array());
 					$mResult = true;
-				} 
-				catch (\Exception $ex) 
+				}
+				catch (\Exception $ex)
 				{
 					$mResult = false;
-				}				
+				}
 			}
 		}
-	}	
+	}
 
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
@@ -497,7 +501,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 				$Path = \trim($aArgs['Path'], '/');
 				// Set the parent folder.
-				if ($Path != null) 
+				if ($Path != null)
 				{
 				  $parent = new \Google_Service_Drive_ParentReference();
 				  $parent->setId($Path);
@@ -505,7 +509,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 				}
 
 				$oDrive = new \Google_Service_Drive($oClient);
-				try 
+				try
 				{
 					$sData = '';
 					if (\is_resource($aArgs['Data']))
@@ -523,14 +527,14 @@ class Module extends \Aurora\System\Module\AbstractModule
 						'uploadType' => 'media'
 					));
 					$Result = true;
-				} 
-				catch (\Exception $ex) 
+				}
+				catch (\Exception $ex)
 				{
 					$Result = false;
-				}				
+				}
 			}
 		}
-	}	
+	}
 
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
@@ -538,7 +542,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	public function onAfterDelete(&$aData, &$mResult)
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
-		
+
 		if ($aData['Type'] === self::$sStorageType)
 		{
 			$oClient = $this->GetClient();
@@ -549,19 +553,19 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 				foreach ($aData['Items'] as $aItem)
 				{
-					try 
+					try
 					{
 						$oDrive->files->trash($aItem['Name']);
 						$mResult = true;
-					} 
-					catch (\Exception $ex) 
+					}
+					catch (\Exception $ex)
 					{
 						$mResult = false;
 					}
 				}
 			}
 		}
-	}	
+	}
 
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
@@ -569,7 +573,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	public function onAfterRename(&$aData, &$mResult)
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
-		
+
 		if ($aData['Type'] === self::$sStorageType)
 		{
 			$oClient = $this->GetClient();
@@ -585,18 +589,18 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 				$additionalParams = array();
 
-				try 
+				try
 				{
 					$oDrive->files->update($aData['Name'], $file, $additionalParams);
 					$mResult = true;
-				} 
-				catch (\Exception $ex) 
+				}
+				catch (\Exception $ex)
 				{
 					$mResult = false;
 				}
 			}
 		}
-	}	
+	}
 
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
@@ -604,7 +608,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	public function onAfterMove(&$aData, &$mResult)
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
-		
+
 		if ($aData['FromType'] === self::$sStorageType)
 		{
 			$oClient = $this->GetClient();
@@ -621,24 +625,24 @@ class Module extends \Aurora\System\Module\AbstractModule
 				$parent->setId($aData['ToPath']);
 
 	//			$oFile->setTitle($sNewName);
-	
+
 				foreach ($aData['Files'] as $aItem)
 				{
 					$oFile = $oDrive->files->get($aItem['Name']);
 					$oFile->setParents(array($parent));
-					try 
+					try
 					{
 						$oDrive->files->patch($aItem['Name'], $oFile);
 						$mResult = true;
-					} 
-					catch (\Exception $ex) 
+					}
+					catch (\Exception $ex)
 					{
 						$mResult = false;
 					}
 				}
 			}
 		}
-	}	
+	}
 
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
@@ -646,7 +650,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	public function onAfterCopy(&$aData, &$mResult)
 	{
 		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
-		
+
 		if ($aData['FromType'] === self::$sStorageType)
 		{
 			$oClient = $this->GetClient();
@@ -666,20 +670,20 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 				foreach ($aData['Files'] as $aItem)
 				{
-					try 
+					try
 					{
 						$oDrive->files->copy($aItem['Name'], $copiedFile);
 						$mResult = true;
-					} 
-					catch (\Exception $ex) 
+					}
+					catch (\Exception $ex)
 					{
 						$mResult = false;
-					}				
+					}
 				}
 			}
 		}
-	}		
-	
+	}
+
 	public function onAfterPopulateFileItem($aArgs, &$oItem)
 	{
 		if ($oItem->IsLink)
@@ -701,7 +705,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 						$oItem->UnshiftAction(array(
 							'list' => array()
 						));
-						
+
 						$oItem->Thumb = true;
 						$oItem->ThumbnailUrl = \MailSo\Base\Http::SingletonInstance()->GetFullUrl() . 'modules/' . self::GetName() . '/images/drive.png';
 					}
@@ -709,12 +713,12 @@ class Module extends \Aurora\System\Module\AbstractModule
 					{
 						$oItem->Size = isset($oFileInfo->fileSize) ? $oFileInfo->fileSize : $oItem->Size;
 					}
-				}				
+				}
 				return true;
 			}
 		}
-	}	
-	
+	}
+
 	protected function PopulateGoogleDriveFileInfo(&$oFileInfo)
 	{
 		if ($oFileInfo->mimeType !== "application/vnd.google-apps.folder" && !isset($oFileInfo->downloadUrl))
@@ -768,7 +772,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 			}
 		}
 	}
-	
+
 	protected function GetIdByLink($sLink)
 	{
 		$matches = array();
@@ -778,9 +782,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 			\preg_match("%https://\w+\.google\.com/open\?id=(.*)%", $sLink, $matches);
 		}
 
-		return isset($matches[1]) ? $matches[1] : '';			
+		return isset($matches[1]) ? $matches[1] : '';
 	}
-	
+
 	protected function GetLinkInfo($sLink, $bLinkAsId = false)
 	{
 		$mResult = false;
@@ -793,7 +797,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 		{
 			$sGDId = $this->GetIdByLink($sLink);
 		}
-		
+
 		if ($sGDId !== '')
 		{
 			$oFileInfo = $this->_getFileInfo($sGDId);
@@ -811,13 +815,13 @@ class Module extends \Aurora\System\Module\AbstractModule
 		{
 			$mResult = false;
 		}
-		
+
 		return $mResult;
 	}
-	
+
 	/**
 	 * Passes data to connect to service.
-	 * 
+	 *
 	 * @ignore
 	 * @param string $aArgs Service type to verify if data should be passed.
 	 * @param boolean|array $mResult variable passed by reference to take the result.
@@ -825,7 +829,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	public function onGetSettings($aArgs, &$mResult)
 	{
 		$oUser = \Aurora\System\Api::getAuthenticatedUser();
-		
+
 		if (!empty($oUser))
 		{
 			$aScope = array(
@@ -849,9 +853,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$mResult['Scopes'][] = $aScope;
 				}
 			}
-		}	
+		}
 	}
-	
+
 	public function onAfterUpdateSettings($aArgs, &$mResult)
 	{
 		$sScope = '';
@@ -871,10 +875,28 @@ class Module extends \Aurora\System\Module\AbstractModule
 		}
 		$this->setConfig('Scopes', $sScope);
 		$this->saveModuleConfig();
-	}		
-	
+	}
+
 	public function onAfterCheckUrl(&$aArgs, &$aReslult)
 	{
-		
+
+	}
+
+	public function onAfterGetQuota(&$aArgs, &$aResult)
+	{
+		if ($aArgs['Type'] === self::$sStorageType)
+		{
+			$mResult = [0, 0];
+			return true;
+		}
+	}
+
+	public function onAfterCheckQuota(&$aArgs, &$mResult)
+	{
+		if ($aArgs['Type'] === self::$sStorageType)
+		{
+			$mResult = true;
+			return true;
+		}
 	}
 }
