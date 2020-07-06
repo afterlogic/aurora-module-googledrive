@@ -251,7 +251,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 			'UserId' => \Aurora\System\Api::getAuthenticatedUserId(),
 			'Type' => $oItem->TypeStr,
 			'Path' => '',
-			'Name' => $oItem->FullPath
+			'Name' => $oItem->FullPath,
+			'FileName' => $oItem->Name
 		));
 	}
 
