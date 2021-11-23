@@ -37,7 +37,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$this->subscribeEvent('GoogleAuthWebclient::PopulateScopes', array($this, 'onPopulateScopes'));
 		$this->subscribeEvent('Files::GetStorages::after', array($this, 'onAfterGetStorages'));
 		$this->subscribeEvent('Files::GetFile', array($this, 'onGetFile'));
-		$this->subscribeEvent('Files::GetItems::after', array($this, 'onAfterGetItems'));
+		$this->subscribeEvent('Files::GetItems', array($this, 'onGetItems'));
 		$this->subscribeEvent('Files::GetFileInfo::after', array($this, 'onAfterGetFileInfo'));
 		$this->subscribeEvent('Files::GetFile::after', array($this, 'onAfterGetFile'));
 		$this->subscribeEvent('Files::CreateFolder::after', array($this, 'onAfterCreateFolder'));
@@ -322,7 +322,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	/**
 	 * @param \Aurora\Modules\StandardAuth\Classes\Account $oAccount
 	 */
-	public function onAfterGetItems($aArgs, &$mResult)
+	public function onGetItems($aArgs, &$mResult)
 	{
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
