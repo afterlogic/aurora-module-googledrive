@@ -161,6 +161,19 @@ class Module extends \Aurora\System\Module\AbstractModule
 		return $mResult;
 	}
 
+	protected function GetDriveService()
+	{
+		$oDrive = null;
+		$oClient = $this->GetClient();
+		if ($oClient) {
+			$oDrive = new \Google_Service_Drive($oClient);
+			$oDrive->servicePath = 'drive/v2/';
+			$oDrive->version = 'v2';
+		}
+
+		return $oDrive;
+	}
+
 	protected function _dirname($sPath)
 	{
 		$sPath = \dirname($sPath);
@@ -230,10 +243,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 	protected function _getFileInfo($sName)
 	{
 		$mResult = false;
-		$oClient = $this->GetClient();
-		if ($oClient)
+		$oDrive = $this->GetDriveService()();
+		if ($oDrive)
 		{
-			$oDrive = new \Google_Service_Drive($oClient);
 			$mResult = $oDrive->files->get($sName);
 		}
 
@@ -279,10 +291,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 	{
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
-				$oDrive = new \Google_Service_Drive($oClient);
 				$oFile = $oDrive->files->get($aArgs['Id']);
 
 				$this->PopulateGoogleDriveFileInfo($oFile);
@@ -327,10 +338,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
 			$mResult = array();
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
-				$oDrive = new \Google_Service_Drive($oClient);
 				$sPath = \ltrim(\basename($aArgs['Path']), '/');
 
 				$aFileItems = array();
@@ -454,8 +464,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
 				$folder = new \Google_Service_Drive_DriveFile();
 				$folder->setTitle($aArgs['FolderName']);
@@ -469,7 +479,6 @@ class Module extends \Aurora\System\Module\AbstractModule
 				  $folder->setParents(array($parent));
 				}
 
-				$oDrive = new \Google_Service_Drive($oClient);
 				try
 				{
 					$oDrive->files->insert($folder, array());
@@ -492,8 +501,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
 				$sMimeType = \MailSo\Base\Utils::MimeContentType($aArgs['Name']);
 				$file = new \Google_Service_Drive_DriveFile();
@@ -509,7 +518,6 @@ class Module extends \Aurora\System\Module\AbstractModule
 				  $file->setParents(array($parent));
 				}
 
-				$oDrive = new \Google_Service_Drive($oClient);
 				try
 				{
 					$sData = '';
@@ -546,11 +554,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['Type'] === self::$sStorageType)
 		{
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
 				$mResult = false;
-				$oDrive = new \Google_Service_Drive($oClient);
 
 				foreach ($aData['Items'] as $aItem)
 				{
@@ -577,11 +584,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['Type'] === self::$sStorageType)
 		{
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
 				$mResult = false;
-				$oDrive = new \Google_Service_Drive($oClient);
 				// First retrieve the file from the API.
 				$file = $oDrive->files->get($aData['Name']);
 
@@ -612,15 +618,13 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['FromType'] === self::$sStorageType)
 		{
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
 				$mResult = false;
 
 				$aData['FromPath'] = $aData['FromPath'] === '' ?  'root' :  \trim($aData['FromPath'], '/');
 				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  \trim($aData['ToPath'], '/');
-
-				$oDrive = new \Google_Service_Drive($oClient);
 
 				$parent = new \Google_Service_Drive_ParentReference();
 				$parent->setId($aData['ToPath']);
@@ -654,11 +658,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['FromType'] === self::$sStorageType)
 		{
-			$oClient = $this->GetClient();
-			if ($oClient)
+			$oDrive = $this->GetDriveService();
+			if ($oDrive)
 			{
 				$mResult = false;
-				$oDrive = new \Google_Service_Drive($oClient);
 
 				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  \trim($aData['ToPath'], '/');
 
