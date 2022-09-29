@@ -20,6 +20,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 {
 	protected static $sStorageType = 'google';
 	protected static $iStorageOrder = 200;
+	
+	protected $oClient = null;
+
+	protected $oService = null;
 
 	protected $aRequireModules = array(
 		'Files',
@@ -107,71 +111,73 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 	protected function GetClient()
 	{
-		\Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
-
-		$oGoogleModule = \Aurora\System\Api::GetModule('Google');
-		if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule)
+		if (!isset($this->oClient)) 
 		{
-			if (!$oGoogleModule->getConfig('EnableModule', false) || !$this->issetScope('storage'))
+			$oGoogleModule = \Aurora\System\Api::GetModule('Google');
+			if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule)
+			{
+				if (!$oGoogleModule->getConfig('EnableModule', false) || !$this->issetScope('storage'))
+				{
+					return false;
+				}
+			}
+			else
 			{
 				return false;
 			}
-		}
-		else
-		{
-			return false;
-		}
 
-		$mResult = false;
-		$oOAuthIntegratorWebclientModule = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator();
-		$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sStorageType);
-		if ($oSocialAccount)
-		{
-			$oGoogleModule = \Aurora\Modules\Google\Module::Decorator();
-			if ($oGoogleModule)
+			$oOAuthIntegratorWebclientModule = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator();
+			$oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sStorageType);
+			if ($oSocialAccount)
 			{
-				$oClient = new \Google_Client();
-				$oClient->setClientId($oGoogleModule->getConfig('Id', ''));
-				$oClient->setClientSecret($oGoogleModule->getConfig('Secret', ''));
-				$oClient->addScope('https://www.googleapis.com/auth/userinfo.email');
-				$oClient->addScope('https://www.googleapis.com/auth/userinfo.profile');
-				$oClient->addScope("https://www.googleapis.com/auth/drive");
-				$bRefreshToken = false;
-				try
+				$oGoogleModule = \Aurora\Modules\Google\Module::Decorator();
+				if ($oGoogleModule)
 				{
-					$oClient->setAccessToken($oSocialAccount->AccessToken);
-				}
-				catch (\Exception $oException)
-				{
-					$bRefreshToken = true;
-				}
-				if ($oClient->isAccessTokenExpired() || $bRefreshToken)
-				{
-					$oClient->refreshToken($oSocialAccount->RefreshToken);
-					$oSocialAccount->AccessToken = $oClient->getAccessToken();
-					$oOAuthIntegratorWebclientModule->UpdateAccount($oSocialAccount);
-				}
-				if ($oClient->getAccessToken())
-				{
-					$mResult = $oClient;
+					$oClient = new \Google_Client();
+					$oClient->setClientId($oGoogleModule->getConfig('Id', ''));
+					$oClient->setClientSecret($oGoogleModule->getConfig('Secret', ''));
+					$oClient->addScope([
+						'https://www.googleapis.com/auth/userinfo.email',
+						'https://www.googleapis.com/auth/userinfo.profile',
+						'https://www.googleapis.com/auth/drive'
+					]);
+					$bRefreshToken = false;
+					try
+					{
+						$oClient->setAccessToken($oSocialAccount->AccessToken);
+					}
+					catch (\Exception $oException)
+					{
+						$bRefreshToken = true;
+					}
+					if ($oClient->isAccessTokenExpired() || $bRefreshToken)
+					{
+						$oClient->refreshToken($oSocialAccount->RefreshToken);
+						$oSocialAccount->AccessToken = $oClient->getAccessToken();
+						$oOAuthIntegratorWebclientModule->UpdateAccount($oSocialAccount);
+					}
+					if ($oClient->getAccessToken())
+					{
+						$this->oClient = $oClient;
+					}
 				}
 			}
 		}
 
-		return $mResult;
+		return $this->oClient;
 	}
 
 	protected function GetDriveService()
 	{
-		$oDrive = null;
-		$oClient = $this->GetClient();
-		if ($oClient) {
-			$oDrive = new \Google_Service_Drive($oClient);
-			$oDrive->servicePath = 'drive/v2/';
-			$oDrive->version = 'v2';
+		if (!isset($this->oService))
+		{
+			$oClient = $this->GetClient();
+			if ($oClient) {
+				$this->oService = new \Google_Service_Drive($oClient);
+			}
 		}
 
-		return $oDrive;
+		return $this->oService;
 	}
 
 	protected function _dirname($sPath)
@@ -196,13 +202,19 @@ class Module extends \Aurora\System\Module\AbstractModule
 		$mResult = false;
 		if ($oFile)
 		{
+			if (isset($oFile->shortcutDetails)) {
+				$oFile->mimeType = $oFile->shortcutDetails['targetMimeType'];
+				$oFile->id = $oFile->shortcutDetails['targetId'];
+			}
+
 			$this->PopulateGoogleDriveFileInfo($oFile);
+
 			$mResult /*@var $mResult \Aurora\Modules\Files\Classes\FileItem */ = new  \Aurora\Modules\Files\Classes\FileItem();
 			$mResult->IsExternal = true;
 			$mResult->TypeStr = $sType;
 			$mResult->IsFolder = ($oFile->mimeType === "application/vnd.google-apps.folder");
 			$mResult->Id = $oFile->id;
-			$mResult->Name = $oFile->title;
+			$mResult->Name = $oFile->name;
 			$mResult->Path = '';
 			$mResult->Size = $oFile->fileSize;
 			$mResult->FullPath = $oFile->id;
@@ -234,7 +246,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 			}
 
 //				$oItem->Owner = $oSocial->Name;
-			$mResult->LastModified = \date_timestamp_get(date_create($oFile->createdDate));
+			$mResult->LastModified = \date_timestamp_get(date_create($oFile->createdTime));
 		}
 
 		return $mResult;
@@ -243,10 +255,9 @@ class Module extends \Aurora\System\Module\AbstractModule
 	protected function _getFileInfo($sName)
 	{
 		$mResult = false;
-		$oDrive = $this->GetDriveService()();
-		if ($oDrive)
-		{
-			$mResult = $oDrive->files->get($sName);
+		$oService = $this->GetDriveService();
+		if ($oService) {
+			$mResult = $oService->files->get($sName);
 		}
 
 		return $mResult;
@@ -289,28 +300,27 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 */
 	public function onGetFile($aArgs, &$Result)
 	{
-		if ($aArgs['Type'] === self::$sStorageType)
-		{
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
-			{
-				$oFile = $oDrive->files->get($aArgs['Id']);
+		if ($aArgs['Type'] === self::$sStorageType) {
+			$oService = $this->GetDriveService();
+			if ($oService) {
+				$oFile = $oService->files->get($aArgs['Id']);
 
-				$this->PopulateGoogleDriveFileInfo($oFile);
-				$aArgs['Name'] = $oFile->title;
+				$sMimeType = $this->getMimeTypeForExport($oFile);
+				$aArgs['Name'] = $oFile->name;
 
-				$oRequest = new \Google_Http_Request($oFile->downloadUrl, 'GET', null, null);
-				$oClientAuth = $oClient->getAuth();
-				$oClientAuth->sign($oRequest);
-				$oHttpRequest = $oClientAuth->authenticatedRequest($oRequest);
-				if ($oHttpRequest->getResponseHttpCode() === 200)
-				{
-					$Result = \fopen('php://memory','r+');
-					\fwrite($Result, $oHttpRequest->getResponseBody());
-					\rewind($Result);
-
-					return true;
+				if (empty($sMimeType)) {
+					$sFileData = $oService->files->get($aArgs['Id'], ['alt' => 'media']);
+				} else {
+					$sFileData = $oService->files->export($aArgs['Id'], $sMimeType, [
+						'alt' => 'media'
+					]);
 				}
+
+				$Result = \fopen('php://memory','r+');
+				\fwrite($Result, $sFileData);
+				\rewind($Result);
+
+				return true;
 			}
 		}
 	}
@@ -337,41 +347,42 @@ class Module extends \Aurora\System\Module\AbstractModule
 	{
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
-			$mResult = array();
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
+			$mResult = [];
+			$oService = $this->GetDriveService();
+			if ($oService)
 			{
 				$sPath = \ltrim(\basename($aArgs['Path']), '/');
 
-				$aFileItems = array();
-				$sPageToken = NULL;
+				$aFileItems = [];
+				$sPageToken = null;
 
-				if (empty($sPath))
-				{
+				if (empty($sPath)) {
 					$sPath = 'root';
 				}
 
 				$sQuery  = "'".$sPath."' in parents and trashed = false";
-				if (!empty($aArgs['Pattern']))
-				{
-					$sQuery .= " and title contains '".$aArgs['Pattern']."'";
+				if (!empty($aArgs['Pattern'])) {
+					$sQuery .= " and name contains '".$aArgs['Pattern']."'";
 				}
 
 				do
 				{
 					try
 					{
-						$aParameters = array('q' => $sQuery);
-						if ($sPageToken)
-						{
+						$aParameters = [
+							'q' => $sQuery,
+							'fields' => '*',
+							'orderBy' => 'name'
+						];
+						if ($sPageToken) {
 							$aParameters['pageToken'] = $sPageToken;
 						}
 
-						$oFiles = $oDrive->files->listFiles($aParameters);
-						$aFileItems = \array_merge($aFileItems, $oFiles->getItems());
+						$oFiles = $oService->files->listFiles($aParameters);
+						$aFileItems = \array_merge($aFileItems, $oFiles->getFiles());
 						$sPageToken = $oFiles->getNextPageToken();
 					}
-					catch (Exception $e)
+					catch (\Exception $e)
 					{
 						$sPageToken = NULL;
 					}
@@ -392,11 +403,11 @@ class Module extends \Aurora\System\Module\AbstractModule
 					$mResult['Path'] = array();
 					if ($sPath !== 'root')
 					{
-						$oPathInfo = $oDrive->files->get($sPath);
+						$oPathInfo = $oService->files->get($sPath);
 						$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);
 						while (true)
 						{
-							$aParrents = $oDrive->parents->listParents($sPath);
+							$aParrents = $oService->parents->listParents($sPath);
 							if ($aParrents == null ||count($aParrents) == 0)
 							{
 								break;
@@ -405,7 +416,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 							$sPath = $oParrent->id;
 							if (!$oParrent->isRoot)
 							{
-								$oItem = $oDrive->files->get($sPath);
+								$oItem = $oService->files->get($sPath);
 								if ($oItem)
 								{
 									$mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oItem);
@@ -464,24 +475,22 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
+			$oService = $this->GetDriveService();
+			if ($oService)
 			{
 				$folder = new \Google_Service_Drive_DriveFile();
-				$folder->setTitle($aArgs['FolderName']);
+				$folder->setName($aArgs['FolderName']);
 				$folder->setMimeType('application/vnd.google-apps.folder');
 
 				// Set the parent folder.
 				if ($aArgs['Path'] != null)
 				{
-				  $parent = new \Google_Service_Drive_ParentReference();
-				  $parent->setId($aArgs['Path']);
-				  $folder->setParents(array($parent));
+				  $folder->setParents(array($aArgs['Path']));
 				}
 
 				try
 				{
-					$oDrive->files->insert($folder, array());
+					$oService->files->create($folder, array());
 					$mResult = true;
 				}
 				catch (\Exception $ex)
@@ -501,21 +510,19 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aArgs['Type'] === self::$sStorageType)
 		{
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
+			$oService = $this->GetDriveService();
+			if ($oService)
 			{
 				$sMimeType = \MailSo\Base\Utils::MimeContentType($aArgs['Name']);
 				$file = new \Google_Service_Drive_DriveFile();
-				$file->setTitle($aArgs['Name']);
+				$file->setName($aArgs['Name']);
 				$file->setMimeType($sMimeType);
 
 				$Path = \trim($aArgs['Path'], '/');
 				// Set the parent folder.
 				if ($Path != null)
 				{
-				  $parent = new \Google_Service_Drive_ParentReference();
-				  $parent->setId($Path);
-				  $file->setParents(array($parent));
+				  $file->setParents(array($Path));
 				}
 
 				try
@@ -530,7 +537,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 					{
 						$sData = $aArgs['Data'];
 					}
-					$oDrive->files->insert($file, array(
+					$oService->files->create($file, array(
 						'data' => $sData,
 						'mimeType' => $sMimeType,
 						'uploadType' => 'media'
@@ -554,8 +561,8 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['Type'] === self::$sStorageType)
 		{
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
+			$oService = $this->GetDriveService();
+			if ($oService)
 			{
 				$mResult = false;
 
@@ -563,7 +570,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 				{
 					try
 					{
-						$oDrive->files->trash($aItem['Name']);
+						$oService->files->delete($aItem['Name']);
 						$mResult = true;
 					}
 					catch (\Exception $ex)
@@ -584,21 +591,19 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['Type'] === self::$sStorageType)
 		{
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
+			$oService = $this->GetDriveService();
+			if ($oService)
 			{
 				$mResult = false;
-				// First retrieve the file from the API.
-				$file = $oDrive->files->get($aData['Name']);
 
-				// File's new metadata.
-				$file->setTitle($aData['NewName']);
+				$file = new \Google_Service_Drive_DriveFile();
+				$file->setName($aData['NewName']);
 
 				$additionalParams = array();
 
 				try
 				{
-					$oDrive->files->update($aData['Name'], $file, $additionalParams);
+					$oService->files->update($aData['Name'], $file, $additionalParams);
 					$mResult = true;
 				}
 				catch (\Exception $ex)
@@ -618,26 +623,27 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['FromType'] === self::$sStorageType)
 		{
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
+			$oService = $this->GetDriveService();
+			if ($oService)
 			{
 				$mResult = false;
 
 				$aData['FromPath'] = $aData['FromPath'] === '' ?  'root' :  \trim($aData['FromPath'], '/');
 				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  \trim($aData['ToPath'], '/');
 
-				$parent = new \Google_Service_Drive_ParentReference();
-				$parent->setId($aData['ToPath']);
-
-	//			$oFile->setTitle($sNewName);
-
 				foreach ($aData['Files'] as $aItem)
 				{
-					$oFile = $oDrive->files->get($aItem['Name']);
-					$oFile->setParents(array($parent));
+					$oFile = $oService->files->get($aItem['Name'], ['fields' => 'parents']);
 					try
 					{
-						$oDrive->files->patch($aItem['Name'], $oFile);
+						$previousParents = join(',', $oFile->parents);
+						$emptyFileMetadata = new \Google_Service_Drive_DriveFile();
+						$oFile = $oService->files->update($aItem['Name'], $emptyFileMetadata, [
+						  'addParents' => $aData['ToPath'],
+						  'removeParents' => $previousParents,
+						  'fields' => 'id, parents']
+						);
+					
 						$mResult = true;
 					}
 					catch (\Exception $ex)
@@ -658,25 +664,23 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 		if ($aData['FromType'] === self::$sStorageType)
 		{
-			$oDrive = $this->GetDriveService();
-			if ($oDrive)
+			$oService = $this->GetDriveService();
+			if ($oService)
 			{
 				$mResult = false;
 
 				$aData['ToPath'] = $aData['ToPath'] === '' ?  'root' :  \trim($aData['ToPath'], '/');
 
-				$parent = new \Google_Service_Drive_ParentReference();
-				$parent->setId($aData['ToPath']);
-
-				$copiedFile = new \Google_Service_Drive_DriveFile();
-	//			$copiedFile->setTitle($sNewName);
-				$copiedFile->setParents(array($parent));
-
 				foreach ($aData['Files'] as $aItem)
 				{
 					try
 					{
-						$oDrive->files->copy($aItem['Name'], $copiedFile);
+						$emptyFileMetadata = new \Google_Service_Drive_DriveFile();
+						$emptyFileMetadata->parents = [$aData['ToPath']];
+						$oService->files->copy($aItem['Name'], $emptyFileMetadata, [
+						  'fields' => 'id, parents']
+						);
+					
 						$mResult = true;
 					}
 					catch (\Exception $ex)
@@ -684,6 +688,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 						$mResult = false;
 					}
 				}
+
 			}
 		}
 	}
@@ -723,57 +728,35 @@ class Module extends \Aurora\System\Module\AbstractModule
 		}
 	}
 
+	protected function getMimeTypeForExport(&$oFileInfo)
+	{
+		switch($oFileInfo->mimeType) {
+			case 'application/vnd.google-apps.document':
+				$oFileInfo->name = $oFileInfo->name . '.docx';
+				return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+				break;
+			case 'application/vnd.google-apps.spreadsheet':
+				$oFileInfo->name = $oFileInfo->name . '.xlsx';
+				return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+				break;
+			case 'application/vnd.google-apps.drawing':
+				$oFileInfo->name = $oFileInfo->name . '.png';
+				return 'image/png';				
+				break;
+			case 'application/vnd.google-apps.presentation':
+				$oFileInfo->name = $oFileInfo->name . '.pptx';
+				return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+				break;
+			default:
+				return '';
+				break;
+		}
+	}
+
 	protected function PopulateGoogleDriveFileInfo(&$oFileInfo)
 	{
-		if ($oFileInfo->mimeType !== "application/vnd.google-apps.folder" && !isset($oFileInfo->downloadUrl))
-		{
-			switch($oFileInfo->mimeType)
-			{
-				case 'application/vnd.google-apps.document':
-					if (\is_array($oFileInfo->exportLinks))
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-					}
-					else
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
-					}
-					$oFileInfo->title = $oFileInfo->title . '.docx';
-					break;
-				case 'application/vnd.google-apps.spreadsheet':
-					if (\is_array($oFileInfo->exportLinks))
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-					}
-					else
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
-					}
-					$oFileInfo->title = $oFileInfo->title . '.xlsx';
-					break;
-				case 'application/vnd.google-apps.drawing':
-					if (\is_array($oFileInfo->exportLinks))
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['image/png'];
-					}
-					else
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'image/png'};
-					}
-					$oFileInfo->title = $oFileInfo->title . '.png';
-					break;
-				case 'application/vnd.google-apps.presentation':
-					if (\is_array($oFileInfo->exportLinks))
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks['application/vnd.openxmlformats-officedocument.presentationml.presentation'];
-					}
-					else
-					{
-						$oFileInfo->downloadUrl = $oFileInfo->exportLinks->{'application/vnd.openxmlformats-officedocument.presentationml.presentation'};
-					}
-					$oFileInfo->title = $oFileInfo->title . '.pptx';
-					break;
-			}
+		if ($oFileInfo->mimeType !== "application/vnd.google-apps.folder") {
+			$this->getMimeTypeForExport($oFileInfo);
 		}
 	}
 
