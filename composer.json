@@ -6,6 +6,9 @@
 		"afterlogic/aurora-framework": "~0.10.0",
 		"google/apiclient":"1.1.9"
 	},
+	"autoload": {
+		"classmap": ["/"]
+	},
 	"extra": {
 		"installer-name": "GoogleDrive"
 	}
