@@ -290,7 +290,7 @@ class Module extends \Aurora\System\Module\AbstractModule
                 }
 
                 $Result = \fopen('php://memory', 'r+');
-                \fwrite($Result, $sFileData);
+                \fwrite($Result, $sFileData->getBody());
                 \rewind($Result);
 
                 return true;
