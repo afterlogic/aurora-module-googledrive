@@ -4,7 +4,7 @@
 	"require": {
 		"php": ">=5.4.0",
 		"afterlogic/aurora-framework": "~0.10.0",
-		"google/apiclient":"1.1.9"
+		"google/apiclient":"~2.13.0"
 	},
 	"autoload": {
 		"classmap": ["/"]
