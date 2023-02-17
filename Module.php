@@ -7,6 +7,8 @@
 
 namespace Aurora\Modules\GoogleDrive;
 
+use GuzzleHttp\Psr7\Request;
+
 /**
  * Adds ability to work with Google Drive file storage inside Aurora Files module.
  *
@@ -38,6 +40,12 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     public function init()
     {
+        $this->AddEntries(
+            [
+                'google-drive-thumb' => 'EntryThumbnail'
+            ]
+        );
+
         $this->subscribeEvent('GoogleAuthWebclient::PopulateScopes', array($this, 'onPopulateScopes'));
         $this->subscribeEvent('Files::GetStorages::after', array($this, 'onAfterGetStorages'));
         $this->subscribeEvent('Files::GetFile', array($this, 'onGetFile'));
@@ -195,12 +203,12 @@ class Module extends \Aurora\System\Module\AbstractModule
             $mResult->Id = $oFile->id;
             $mResult->Name = $oFile->name;
             $mResult->Path = '';
-            $mResult->Size = $oFile->fileSize;
+            $mResult->Size = $oFile->size;
             $mResult->FullPath = $oFile->id;
             $mResult->ContentType = $oFile->mimeType;
-            if (isset($oFile->thumbnailUrl)) {
+            if (isset($oFile->thumbnailLink)) {
                 $mResult->Thumb = true;
-                $mResult->ThumbnailUrl = $oFile->thumbnailUrl;
+                $mResult->ThumbnailUrl = '?google-drive-thumb/' . \Aurora\System\Utils::UrlSafeBase64Encode($oFile->getThumbnailLink());
             }
 
             if ($mResult->IsFolder) {
@@ -775,5 +783,21 @@ class Module extends \Aurora\System\Module\AbstractModule
             $mResult = true;
             return true;
         }
+    }
+
+    public function EntryThumbnail()
+    {
+        \Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::NormalUser);
+
+        $sUrl =  \Aurora\System\Utils::UrlSafeBase64Decode(\Aurora\System\Router::getItemByIndex(1, ''));
+
+        $request = new Request(
+            'GET',
+            $sUrl
+        );
+
+        $client = $this->GetClient();
+        $response = $client->execute($request);
+        echo $response->getBody();
     }
 }
