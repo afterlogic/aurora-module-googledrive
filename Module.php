@@ -42,6 +42,15 @@ class Module extends \Aurora\System\Module\AbstractModule
         return parent::Decorator();
     }
 
+    /**
+     *
+     * @return Settings
+     */
+    protected function GetModuleSettings()
+    {
+        return $this->oModuleSettings;
+    }
+
     protected function issetScope($sScope)
     {
         return \in_array($sScope, \explode(' ', $this->getConfig('Scopes')));
