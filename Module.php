@@ -16,6 +16,8 @@ use GuzzleHttp\Psr7\Request;
  * @license https://afterlogic.com/products/common-licensing Afterlogic Software License
  * @copyright Copyright (c) 2023, Afterlogic Corp.
  *
+ * @property Settings $oModuleSettings
+ *
  * @package Modules
  */
 class Module extends \Aurora\System\Module\AbstractModule
@@ -53,7 +55,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     protected function issetScope($sScope)
     {
-        return \in_array($sScope, \explode(' ', $this->getConfig('Scopes')));
+        return \in_array($sScope, \explode(' ', $this->oModuleSettings->Scopes));
     }
 
     public function init()
