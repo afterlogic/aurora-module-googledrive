@@ -36,7 +36,14 @@ class Module extends \Aurora\System\Module\AbstractModule
     );
 
     /**
-     *
+     * @return Module
+     */
+    public static function getInstance()
+    {
+        return parent::getInstance();
+    }
+
+    /**
      * @return Module
      */
     public static function Decorator()
@@ -45,7 +52,6 @@ class Module extends \Aurora\System\Module\AbstractModule
     }
 
     /**
-     *
      * @return Settings
      */
     public function getModuleSettings()
@@ -109,18 +115,20 @@ class Module extends \Aurora\System\Module\AbstractModule
         \Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 
         $bEnableGoogleModule = false;
-        $oGoogleModule = \Aurora\System\Api::GetModule('Google');
-        if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule) {
-            $bEnableGoogleModule = $oGoogleModule->getConfig('EnableModule', false);
-        } else {
-            $bEnableGoogleModule = false;
+
+        if (class_exists('Aurora\Modules\Google\Module')) {
+            $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
+            $bEnableGoogleModule = $oGoogleModule->oModuleSettings->EnableModule;
         }
 
         $oOAuthAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount(self::$sStorageType);
 
-        if ($oOAuthAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Models\OauthAccount &&
-                $oOAuthAccount->Type === self::$sStorageType && $bEnableGoogleModule &&
-                    $this->issetScope('storage') && $oOAuthAccount->issetScope('storage')) {
+        if ($oOAuthAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Models\OauthAccount
+            && $oOAuthAccount->Type === self::$sStorageType
+            && $bEnableGoogleModule
+            && $this->issetScope('storage')
+            && $oOAuthAccount->issetScope('storage')
+        ) {
             $mResult[] = [
                 'Type' => self::$sStorageType,
                 'IsExternal' => true,
@@ -133,9 +141,9 @@ class Module extends \Aurora\System\Module\AbstractModule
     protected function GetClient()
     {
         if (!isset($this->oClient)) {
-            $oGoogleModule = \Aurora\System\Api::GetModule('Google');
-            if ($oGoogleModule instanceof \Aurora\System\Module\AbstractModule) {
-                if (!$oGoogleModule->getConfig('EnableModule', false) || !$this->issetScope('storage')) {
+            if (class_exists('Aurora\Modules\Google\Module')) {
+                $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
+                if (!$oGoogleModule->oModuleSettings->EnableModule || !$this->issetScope('storage')) {
                     return false;
                 }
             } else {
@@ -145,11 +153,11 @@ class Module extends \Aurora\System\Module\AbstractModule
             $oOAuthIntegratorWebclientModule = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator();
             $oSocialAccount = $oOAuthIntegratorWebclientModule->GetAccount(self::$sStorageType);
             if ($oSocialAccount) {
-                $oGoogleModule = \Aurora\Modules\Google\Module::Decorator();
+                $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
                 if ($oGoogleModule) {
                     $oClient = new \Google_Client();
-                    $oClient->setClientId($oGoogleModule->getConfig('Id', ''));
-                    $oClient->setClientSecret($oGoogleModule->getConfig('Secret', ''));
+                    $oClient->setClientId($oGoogleModule->oModuleSettings->Id);
+                    $oClient->setClientSecret($oGoogleModule->oModuleSettings->Secret);
                     $oClient->addScope([
                         'https://www.googleapis.com/auth/userinfo.email',
                         'https://www.googleapis.com/auth/userinfo.profile',
