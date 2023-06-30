@@ -155,7 +155,7 @@ class Module extends \Aurora\System\Module\AbstractModule
             if ($oSocialAccount) {
                 $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
                 if ($oGoogleModule) {
-                    $oClient = new \Google_Client();
+                    $oClient = new \Google\Client();
                     $oClient->setClientId($oGoogleModule->oModuleSettings->Id);
                     $oClient->setClientSecret($oGoogleModule->oModuleSettings->Secret);
                     $oClient->addScope([
@@ -189,7 +189,7 @@ class Module extends \Aurora\System\Module\AbstractModule
         if (!isset($this->oService)) {
             $oClient = $this->GetClient();
             if ($oClient) {
-                $this->oService = new \Google_Service_Drive($oClient);
+                $this->oService = new \Google\Service\Drive($oClient);
             }
         }
 
