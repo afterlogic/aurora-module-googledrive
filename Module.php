@@ -248,7 +248,7 @@ class Module extends \Aurora\System\Module\AbstractModule
             } else {
                 $mResult->AddAction([
                     'view' => [
-                        'url' => '?download-file/' . $this->getItemHash($mResult) .'/view'
+                        'url' => '?download-file/' . $this->getItemHash($mResult) . '/view'
                     ]
                 ]);
                 $mResult->AddAction([
@@ -369,9 +369,9 @@ class Module extends \Aurora\System\Module\AbstractModule
                     $sPath = 'root';
                 }
 
-                $sQuery  = "'".$sPath."' in parents and trashed = false";
+                $sQuery  = "'" . $sPath . "' in parents and trashed = false";
                 if (!empty($aArgs['Pattern'])) {
-                    $sQuery .= " and name contains '".$aArgs['Pattern']."'";
+                    $sQuery .= " and name contains '" . $aArgs['Pattern'] . "'";
                 }
 
                 do {
@@ -407,7 +407,7 @@ class Module extends \Aurora\System\Module\AbstractModule
                         $mResult['Path'][] = $this->PopulateFileInfo($aArgs['Type'], $aArgs['Path'], $oPathInfo);
                         while (true) {
                             $aParrents = $oService->parents->listParents($sPath);
-                            if ($aParrents == null ||count($aParrents) == 0) {
+                            if ($aParrents == null || count($aParrents) == 0) {
                                 break;
                             }
                             $oParrent = $aParrents[0];
@@ -807,9 +807,7 @@ class Module extends \Aurora\System\Module\AbstractModule
         $this->saveModuleConfig();
     }
 
-    public function onAfterCheckUrl(&$aArgs, &$aReslult)
-    {
-    }
+    public function onAfterCheckUrl(&$aArgs, &$aReslult) {}
 
     public function onAfterGetQuota(&$aArgs, &$aResult)
     {
