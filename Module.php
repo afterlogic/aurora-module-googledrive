@@ -92,9 +92,9 @@ class Module extends \Aurora\System\Module\AbstractModule
         $this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
         $this->subscribeEvent('Google::UpdateSettings::after', array($this, 'onAfterUpdateSettings'));
 
-        $this->subscribeEvent('Files::GetItems::before', array($this, 'CheckUrlFile'));
-        $this->subscribeEvent('Files::UploadFile::before', array($this, 'CheckUrlFile'));
-        $this->subscribeEvent('Files::CreateFolder::before', array($this, 'CheckUrlFile'));
+        $this->subscribeEvent('Files::GetItems::before', array($this, 'onCheckUrlFile'));
+        $this->subscribeEvent('Files::UploadFile::before', array($this, 'onCheckUrlFile'));
+        $this->subscribeEvent('Files::CreateFolder::before', array($this, 'onCheckUrlFile'));
 
         $this->subscribeEvent('Files::CheckQuota::after', array($this, 'onAfterCheckQuota'));
         $this->subscribeEvent('Files::GetQuota::after', array($this, 'onAfterGetQuota'));
@@ -114,21 +114,7 @@ class Module extends \Aurora\System\Module\AbstractModule
     {
         \Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 
-        $bEnableGoogleModule = false;
-
-        if (class_exists('Aurora\Modules\Google\Module')) {
-            $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
-            $bEnableGoogleModule = $oGoogleModule->oModuleSettings->EnableModule;
-        }
-
-        $oOAuthAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount(self::$sStorageType);
-
-        if ($oOAuthAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Models\OauthAccount
-            && $oOAuthAccount->Type === self::$sStorageType
-            && $bEnableGoogleModule
-            && $this->issetScope('storage')
-            && $oOAuthAccount->issetScope('storage')
-        ) {
+        if ($this->CheckDriveAccess()) {
             $mResult[] = [
                 'Type' => self::$sStorageType,
                 'IsExternal' => true,
@@ -186,6 +172,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     protected function GetDriveService()
     {
+        if (!$this->CheckDriveAccess()) {
+            return false;
+        }
+
         if (!isset($this->oService)) {
             $oClient = $this->GetClient();
             if ($oClient) {
@@ -337,15 +327,17 @@ class Module extends \Aurora\System\Module\AbstractModule
         }
     }
 
-    public function CheckUrlFile(&$aArgs, &$mResult)
+    public function onCheckUrlFile(&$aArgs, &$mResult)
     {
-        if (strpos($aArgs['Path'], '.url') !== false) {
+        if ($this->CheckDriveAccess() && (\pathinfo($aArgs['Path'], PATHINFO_EXTENSION) === 'url' || strpos($aArgs['Path'], '.url/'))) {
             list($sUrl, $sId) = explode('.url', $aArgs['Path']);
             $sUrl .= '.url';
             $aArgs['Path'] = $sUrl;
             $this->prepareArgs($aArgs);
-            if ($sId) {
+            if ($sId && $aArgs['Type'] === self::$sStorageType) {
                 $aArgs['Path'] = basename($sId);
+            } elseif ($aArgs['Type'] !== self::$sStorageType) {
+                $aArgs['Path'] = $sUrl . $sId;
             }
         }
     }
@@ -437,6 +429,7 @@ class Module extends \Aurora\System\Module\AbstractModule
                 'Type' => $aData['Type'],
                 'Path' => $aPathInfo['dirname'],
                 'Name' => $aPathInfo['basename'],
+                'Id' => $aPathInfo['basename'],
                 'IsThumb' => false
             );
             $mResult = false;
@@ -725,7 +718,7 @@ class Module extends \Aurora\System\Module\AbstractModule
     protected function GetIdByLink($sLink)
     {
         $matches = array();
-        \preg_match("%https://\w+\.google\.com/\w+/d/(.*?)/.*%", $sLink, $matches);
+        \preg_match("%https://\w+\.google\.com/\w+/\w+/(.*)\?.*%", $sLink, $matches);
         if (!isset($matches[1])) {
             \preg_match("%https://\w+\.google\.com/open\?id=(.*)%", $sLink, $matches);
         }
@@ -839,5 +832,23 @@ class Module extends \Aurora\System\Module\AbstractModule
         $client = $this->GetClient();
         $response = $client->execute($request);
         echo $response->getBody();
+    }
+
+    protected function CheckDriveAccess()
+    {
+        $bEnableGoogleModule = false;
+
+        if (class_exists('Aurora\Modules\Google\Module')) {
+            $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
+            $bEnableGoogleModule = $oGoogleModule->oModuleSettings->EnableModule;
+        }
+
+        $oOAuthAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount(self::$sStorageType);
+
+        return ($oOAuthAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Models\OauthAccount
+            && $oOAuthAccount->Type === self::$sStorageType
+            && $bEnableGoogleModule
+            && $this->issetScope('storage')
+            && $oOAuthAccount->issetScope('storage'));
     }
 }
