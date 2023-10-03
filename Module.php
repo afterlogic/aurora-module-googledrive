@@ -114,7 +114,7 @@ class Module extends \Aurora\System\Module\AbstractModule
     {
         \Aurora\System\Api::checkUserRoleIsAtLeast(\Aurora\System\Enums\UserRole::Anonymous);
 
-        if ($this->CheckDriveAccess()) {
+        if ($this->checkIfModuleConfigured()) {
             $mResult[] = [
                 'Type' => self::$sStorageType,
                 'IsExternal' => true,
@@ -172,7 +172,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     protected function GetDriveService()
     {
-        if (!$this->CheckDriveAccess()) {
+        if (!$this->checkIfModuleConfigured()) {
             return false;
         }
 
@@ -329,7 +329,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     public function onCheckUrlFile(&$aArgs, &$mResult)
     {
-        if ($this->CheckDriveAccess() && (\pathinfo($aArgs['Path'], PATHINFO_EXTENSION) === 'url' || strpos($aArgs['Path'], '.url/'))) {
+        if ($this->checkIfModuleConfigured() && (\pathinfo($aArgs['Path'], PATHINFO_EXTENSION) === 'url' || strpos($aArgs['Path'], '.url/'))) {
             list($sUrl, $sId) = explode('.url', $aArgs['Path']);
             $sUrl .= '.url';
             $aArgs['Path'] = $sUrl;
@@ -834,7 +834,7 @@ class Module extends \Aurora\System\Module\AbstractModule
         echo $response->getBody();
     }
 
-    protected function CheckDriveAccess()
+    protected function checkIfModuleConfigured()
     {
         $bEnableGoogleModule = false;
 
