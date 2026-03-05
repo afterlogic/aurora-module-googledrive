@@ -8,6 +8,7 @@
 namespace Aurora\Modules\GoogleDrive;
 
 use GuzzleHttp\Psr7\Request;
+use Aurora\System\Facades\Route;
 
 /**
  * Adds ability to work with Google Drive file storage inside Aurora Files module.
@@ -66,9 +67,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     public function init()
     {
-        $this->AddEntries(
+        Route::add(
+            $this,
             [
-                'google-drive-thumb' => 'EntryThumbnail'
+                'google-drive-thumb' => 'EntryThumbnail',
             ]
         );
 
